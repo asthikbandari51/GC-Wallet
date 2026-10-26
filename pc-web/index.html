@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GiftVault Pro — PC & Web Desktop Suite (V7.0)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- JsBarcode for Code 128 barcodes -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-lg font-black tracking-tight bg-gradient-to-r from-white via-indigo-200 to-indigo-400 bg-clip-text text-transparent">GiftVault Pro</h1>
+          <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">V7.0 PC SUITE</span>
+        </div>
+        <p class="text-xs text-slate-400">PNB Select Imperial & Multi-Bank Profile Vault</p>
+      </div>
+    </div>
+
+    <!-- Tab Switcher -->
+    <nav class="flex items-center space-x-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
+      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all bg-indigo-600 text-white shadow-md">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Dashboard</span>
+      </button>
+      <button onclick="switchTab('cards')" id="tab-btn-cards" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-white">
+        <i data-lucide="credit-card" class="w-4 h-4"></i>
+        <span>Bank Cards</span>
+      </button>
+      <button onclick="switchTab('vouchers')" id="tab-btn-vouchers" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-white">
+        <i data-lucide="ticket" class="w-4 h-4"></i>
+        <span>Vouchers</span>
+      </button>
+      <button onclick="switchTab('rupay')" id="tab-btn-rupay" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-white">
+        <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+        <span>RuPay Auto-Redeem</span>
+      </button>
+      <button onclick="switchTab('claims')" id="tab-btn-claims" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-white">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        <span>Truztee Disputes</span>
+      </button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="flex items-center space-x-3">
+      <button onclick="openAddVoucherModal()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg shadow-indigo-600/25 transition">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>Add Voucher</span>
+      </button>
+      <button onclick="openAddCardModal()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center space-x-1.5 border border-slate-700 transition">
+        <i data-lucide="credit-card" class="w-4 h-4"></i>
+        <span>Add Card</span>
+      </button>
+      <button onclick="exportBackup()" title="Export Encrypted Backup" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+        <i data-lucide="download" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+
+    <!-- 1. DASHBOARD VIEW -->
+    <section id="view-dashboard" class="space-y-6">
+      <!-- Top Metric Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/60 border border-slate-800/80 shadow-xl relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Vault Balance</p>
+              <h3 id="stat-total-balance" class="text-3xl font-black text-white mt-1">₹0</h3>
+            </div>
+            <div class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <i data-lucide="wallet" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <p id="stat-card-count" class="text-xs text-slate-500 mt-3 flex items-center space-x-1">
+            <span>0 Active Vouchers across all profiles</span>
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/60 border border-slate-800/80 shadow-xl relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Active Bank Profiles</p>
+              <h3 id="stat-bank-cards-count" class="text-3xl font-black text-amber-400 mt-1">0</h3>
+            </div>
+            <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <i data-lucide="credit-card" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <p id="stat-primary-card-name" class="text-xs text-slate-400 mt-3 truncate">Primary: None Set</p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/60 border border-slate-800/80 shadow-xl relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Quarterly Spend</p>
+              <h3 id="stat-quarterly-spend" class="text-3xl font-black text-emerald-400 mt-1">₹0</h3>
+            </div>
+            <div class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <i data-lucide="trending-up" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <div class="mt-3 space-y-1">
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div id="stat-spend-bar" class="bg-emerald-400 h-full rounded-full" style="width: 0%"></div>
+            </div>
+            <p id="stat-spend-target-text" class="text-[11px] text-slate-500 text-right">Target: ₹50,000</p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-900/60 border border-slate-800/80 shadow-xl relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Expiring Soon (30d)</p>
+              <h3 id="stat-expiring-count" class="text-3xl font-black text-rose-400 mt-1">0</h3>
+            </div>
+            <div class="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+              <i data-lucide="clock" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 mt-3">Action required before lapse</p>
+        </div>
+      </div>
+
+      <!-- Quick Bank Switcher Carousel -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-black uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+            <i data-lucide="layers" class="w-4 h-4 text-indigo-400"></i>
+            <span>Bank Card Profiles</span>
+          </h2>
+          <button onclick="switchTab('cards')" class="text-xs font-bold text-indigo-400 hover:text-indigo-300">Manage All &rarr;</button>
+        </div>
+        <div id="dashboard-bank-carousel" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Dynamic Bank Cards Rendered Here -->
+        </div>
+      </div>
+
+      <!-- Recent Vouchers & Auto Category Breakdown -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Vouchers List (2 Cols) -->
+        <div class="lg:col-span-2 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-black uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+              <i data-lucide="ticket" class="w-4 h-4 text-indigo-400"></i>
+              <span>Active Gift Vouchers</span>
+            </h2>
+            <button onclick="switchTab('vouchers')" class="text-xs font-bold text-indigo-400 hover:text-indigo-300">View All &rarr;</button>
+          </div>
+          <div id="dashboard-vouchers-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Dynamic Vouchers Rendered Here -->
+          </div>
+        </div>
+
+        <!-- Category Breakdown (1 Col) -->
+        <div class="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <h2 class="text-sm font-black uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-400"></i>
+            <span>Category Breakdown</span>
+          </h2>
+          <div id="category-breakdown-container" class="space-y-3">
+            <!-- Dynamic Categories Rendered Here -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. BANK CARDS MANAGEMENT VIEW -->
+    <section id="view-cards" class="hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-black text-white">Bank Card Profiles</h2>
+          <p class="text-xs text-slate-400">Manage card credentials, networks, and quarterly reward targets.</p>
+        </div>
+        <button onclick="openAddCardModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-2 shadow-lg shadow-indigo-600/25">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Add New Bank Card</span>
+        </button>
+      </div>
+
+      <div id="bank-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- 3. VOUCHERS VIEW -->
+    <section id="view-vouchers" class="hidden space-y-6">
+      <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
+        <div>
+          <h2 class="text-xl font-black text-white">Gift Voucher Vault</h2>
+          <p class="text-xs text-slate-400">Search, filter, auto-categorize, and present vouchers to cashiers.</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <!-- Search input -->
+          <div class="relative">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-500"></i>
+            <input type="text" id="voucher-search-input" oninput="renderVouchersView()" placeholder="Search merchant, code..." class="pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 w-64" />
+          </div>
+          <!-- Category Filter -->
+          <select id="voucher-category-filter" onchange="renderVouchersView()" class="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+            <option value="ALL">All Categories</option>
+            <option value="Fashion">Fashion</option>
+            <option value="Groceries">Groceries</option>
+            <option value="Food Delivery">Food Delivery</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Pharmacy">Pharmacy</option>
+            <option value="OTT & Streaming">OTT & Streaming</option>
+            <option value="Jewellery">Jewellery</option>
+            <option value="Travel">Travel</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Fitness">Fitness</option>
+            <option value="Others">Others</option>
+          </select>
+          <button onclick="openAddVoucherModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-2 shadow-lg shadow-indigo-600/25">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Add Voucher</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="vouchers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- 4. RUPAY AUTO-REDEEM & REDEMPTION CENTER VIEW -->
+    <section id="view-rupay" class="hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h2 class="text-xl font-black text-white">RuPay Select Auto-Redeem Center</h2>
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">PRO AUTOFILL</span>
+          </div>
+          <p class="text-xs text-slate-400">Automate voucher generation and redemption directly with Truztee portal.</p>
+        </div>
+        <a href="https://rupayselect.truztee.com/" target="_blank" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black flex items-center space-x-2 shadow-lg shadow-amber-500/25 transition">
+          <i data-lucide="external-link" class="w-4 h-4"></i>
+          <span>Launch Official Portal</span>
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left: Active Card Credentials for Autofill -->
+        <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <h3 class="text-sm font-black uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+            <i data-lucide="credit-card" class="w-4 h-4 text-indigo-400"></i>
+            <span>Active Card for Redemption</span>
+          </h3>
+          <div id="rupay-active-card-box">
+            <!-- Active RuPay Card Card Preview -->
+          </div>
+
+          <div class="space-y-2 pt-2 border-t border-slate-800">
+            <button onclick="copyActiveCardField('number')" class="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-between border border-slate-700 transition">
+              <span class="flex items-center space-x-2"><i data-lucide="copy" class="w-4 h-4 text-indigo-400"></i><span>Copy Card Number</span></span>
+              <span id="rupay-btn-lastfour" class="font-mono text-slate-400">•••• ----</span>
+            </button>
+            <button onclick="copyActiveCardField('expiry')" class="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-between border border-slate-700 transition">
+              <span class="flex items-center space-x-2"><i data-lucide="calendar" class="w-4 h-4 text-indigo-400"></i><span>Copy Expiry (MM/YY)</span></span>
+              <span id="rupay-btn-expiry" class="font-mono text-slate-400">--/--</span>
+            </button>
+            <button onclick="copyActiveCardField('cvv')" class="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-between border border-slate-700 transition">
+              <span class="flex items-center space-x-2"><i data-lucide="lock" class="w-4 h-4 text-amber-400"></i><span>Copy CVV</span></span>
+              <span id="rupay-btn-cvv" class="font-mono text-amber-400">•••</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Live Redemption Ingestion & Token Interceptor -->
+        <div class="lg:col-span-2 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <h3 class="text-sm font-black uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+            <i data-lucide="wand-2" class="w-4 h-4 text-amber-400"></i>
+            <span>Instant Voucher / SMS Parser</span>
+          </h3>
+          <p class="text-xs text-slate-400">Paste your redemption SMS or Truztee success email text to auto-create and categorize the voucher into your vault.</p>
+          <textarea id="rupay-paste-input" rows="4" placeholder="Paste SMS/Email text here: e.g. Your Apollo Pharmacy voucher code 1234567890123456 PIN 9876 is valid till 30-Dec-2026..." class="w-full p-3.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"></textarea>
+          <div class="flex justify-end space-x-3">
+            <button onclick="parseAndIngestText()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center space-x-2 shadow-lg shadow-indigo-600/25">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>Parse & Ingest into Vault</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. TRUZTEE DISPUTES VIEW -->
+    <section id="view-claims" class="hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-black text-white">Truztee Dispute & Escalation Manager</h2>
+          <p class="text-xs text-slate-400">Track failed redemptions, pending vouchers, and generate 1-tap escalation emails to rupay@truztee.com.</p>
+        </div>
+        <button onclick="openAddClaimModal()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center space-x-2 shadow-lg shadow-rose-600/25">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Log New Dispute</span>
+        </button>
+      </div>
+
+      <div id="claims-table-container" class="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-xl">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modals & Dialogs -->
+  <!-- 1. Cashier Presentation Modal -->
+  <div id="cashier-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white text-slate-950 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5 border border-slate-200">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-widest text-indigo-600">Cashier Presentation Mode</p>
+          <h3 id="cashier-merchant" class="text-xl font-black text-slate-900">Merchant Name</h3>
+        </div>
+        <button onclick="closeCashierModal()" class="p-2 rounded-full hover:bg-slate-100 text-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- High Contrast Barcode Canvas -->
+      <div class="bg-slate-50 border-2 border-slate-900 rounded-2xl p-4 flex flex-col items-center justify-center">
+        <p class="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">Scan Code at Register</p>
+        <svg id="cashier-barcode-svg" class="max-w-full"></svg>
+        <p id="cashier-code-display" class="font-mono text-xl font-black tracking-widest text-slate-950 mt-2">•••• •••• •••• ••••</p>
+      </div>
+
+      <!-- Security PIN & Balance -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3.5 bg-slate-100 rounded-xl border border-slate-300 text-center">
+          <p class="text-[10px] font-bold text-slate-500 uppercase">Security PIN</p>
+          <p id="cashier-pin-display" class="text-lg font-black font-mono text-slate-950">••••</p>
+        </div>
+        <div class="p-3.5 bg-indigo-50 rounded-xl border border-indigo-200 text-center">
+          <p class="text-[10px] font-bold text-indigo-600 uppercase">Available Balance</p>
+          <p id="cashier-balance-display" class="text-lg font-black text-indigo-950">₹0</p>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="space-y-2">
+        <button onclick="copyCashierCode()" class="w-full py-2.5 rounded-xl border border-slate-900 font-bold text-xs flex items-center justify-center space-x-2 hover:bg-slate-100">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span>Copy Voucher Code</span>
+        </button>
+        <button onclick="closeCashierModal()" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs">
+          Done Presenting
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Add / Edit Bank Card Modal -->
+  <div id="card-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 text-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 id="card-modal-title" class="text-lg font-black text-white">Add Bank Card Details</h3>
+        <button onclick="closeCardModal()" class="p-2 rounded-full hover:bg-slate-800 text-slate-400">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="card-form" onsubmit="saveBankCard(event)" class="space-y-3.5">
+        <input type="hidden" id="card-form-id" value="">
+
+        <div>
+          <label class="text-xs font-bold text-slate-300 block mb-1">Card Nickname *</label>
+          <input type="text" id="card-form-nickname" required placeholder="e.g. PNB Select Imperial" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Bank Name</label>
+            <select id="card-form-bank" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+              <option value="PNB">PNB (Punjab National Bank)</option>
+              <option value="HDFC">HDFC Bank</option>
+              <option value="SBI">SBI (State Bank of India)</option>
+              <option value="ICICI">ICICI Bank</option>
+              <option value="Axis">Axis Bank</option>
+              <option value="Bank of Baroda">Bank of Baroda</option>
+              <option value="Kotak">Kotak Mahindra</option>
+              <option value="Other">Other Bank</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Card Network</label>
+            <select id="card-form-network" onchange="updateTierOptions()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+              <option value="RUPAY">RuPay</option>
+              <option value="VISA">Visa</option>
+              <option value="MASTERCARD">Mastercard</option>
+              <option value="AMEX">American Express</option>
+              <option value="DINERS">Diners Club</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-slate-300 block mb-1">Network Variant / Tier</label>
+          <select id="card-form-tier" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+            <!-- Dynamically populated based on Network -->
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-slate-300 block mb-1">Full 16-Digit Card Number *</label>
+          <input type="text" id="card-form-number" required placeholder="4532 1198 7654 3210" maxlength="19" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Expiry Month</label>
+            <input type="text" id="card-form-month" placeholder="09" maxlength="2" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Expiry Year</label>
+            <input type="text" id="card-form-year" placeholder="28" maxlength="4" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">CVV / CVC</label>
+            <input type="password" id="card-form-cvv" placeholder="123" maxlength="4" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-slate-300 block mb-1">Cardholder Name</label>
+          <input type="text" id="card-form-holder" placeholder="Asthik Sharma" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Quarterly Spend Target (₹)</label>
+            <input type="number" id="card-form-target" value="50000" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Current Quarter Spend (₹)</label>
+            <input type="number" id="card-form-spend" value="0" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-1">
+          <input type="checkbox" id="card-form-primary" class="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500">
+          <label for="card-form-primary" class="text-xs text-slate-300">Set as Primary Card Profile</label>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeCardModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/25">Save Card</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Add Voucher Modal -->
+  <div id="voucher-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 text-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 id="voucher-modal-title" class="text-lg font-black text-white">Add Gift Voucher</h3>
+        <button onclick="closeVoucherModal()" class="p-2 rounded-full hover:bg-slate-800 text-slate-400">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="voucher-form" onsubmit="saveVoucher(event)" class="space-y-3.5">
+        <input type="hidden" id="voucher-form-id" value="">
+
+        <div>
+          <label class="text-xs font-bold text-slate-300 block mb-1">Merchant / Brand Name *</label>
+          <input type="text" id="voucher-form-merchant" oninput="autoMapCategory()" required placeholder="e.g. Myntra, Swiggy, Apollo Pharmacy, Amazon Prime" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Category (Auto-Mapped)</label>
+            <select id="voucher-form-category" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+              <option value="Fashion">Fashion</option>
+              <option value="Groceries">Groceries</option>
+              <option value="Food Delivery">Food Delivery</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Pharmacy">Pharmacy</option>
+              <option value="OTT & Streaming">OTT & Streaming</option>
+              <option value="Jewellery">Jewellery</option>
+              <option value="Travel">Travel</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Fitness">Fitness</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Spa & Salon">Spa & Salon</option>
+              <option value="Payments">Payments</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Link to Bank Card</label>
+            <select id="voucher-form-cardlink" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+              <option value="">None (Standalone)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-slate-300 block mb-1">Voucher Code / Card Number *</label>
+          <input type="text" id="voucher-form-number" required placeholder="16-character alphanumeric code" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">PIN</label>
+            <input type="text" id="voucher-form-pin" placeholder="1234" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Balance (₹) *</label>
+            <input type="number" id="voucher-form-balance" required placeholder="1000" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Expiry Date</label>
+            <input type="date" id="voucher-form-expiry" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeVoucherModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/25">Save Voucher</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
