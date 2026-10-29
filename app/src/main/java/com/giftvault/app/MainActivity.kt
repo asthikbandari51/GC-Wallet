@@ -40,10 +40,23 @@ class MainActivity : FragmentActivity() {
             val themeMode by themeManager.themeMode.collectAsState()
             val isOnboardingCompleted by themeManager.isOnboardingCompleted.collectAsState()
             val isAppLockEnabled by themeManager.isAppLockEnabled.collectAsState()
+            val isPrivacyMode by themeManager.isPrivacyModeEnabled.collectAsState()
             val userName by themeManager.userName.collectAsState()
             val appPin by themeManager.appPin.collectAsState()
 
             var isAppLocked by remember { mutableStateOf(isAppLockEnabled || appPin != null) }
+
+            // Strict Data Security & Sandboxing: Prevent screen capture/recent apps preview in Privacy Mode or when Locked
+            LaunchedEffect(isPrivacyMode, isAppLocked) {
+                if (isPrivacyMode || isAppLocked) {
+                    window.setFlags(
+                        android.view.WindowManager.LayoutParams.FLAG_SECURE,
+                        android.view.WindowManager.LayoutParams.FLAG_SECURE
+                    )
+                } else {
+                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                }
+            }
 
             GiftVaultTheme(themeMode = themeMode) {
                 when {

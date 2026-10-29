@@ -16,14 +16,19 @@ import javax.inject.Inject
 import com.giftvault.app.core.theme.ThemeManager
 
 @Immutable
-enum class BankCardFilter(val displayName: String) {
+enum class BankCardTypeFilter(val displayName: String) {
     ALL("All"),
     CREDIT("Credit"),
-    DEBIT("Debit"),
+    DEBIT("Debit")
+}
+
+@Immutable
+enum class BankCardNetworkFilter(val displayName: String) {
+    ALL("All Networks"),
     RUPAY("RuPay"),
     VISA("Visa"),
     MASTERCARD("Mastercard"),
-    WITH_TARGET("With Target")
+    AMEX("Amex")
 }
 
 @Immutable
@@ -31,7 +36,8 @@ data class ManageBankCardsUiState(
     val bankCards: List<BankCard> = emptyList(),
     val filteredCards: List<BankCard> = emptyList(),
     val searchQuery: String = "",
-    val activeFilter: BankCardFilter = BankCardFilter.ALL,
+    val typeFilter: BankCardTypeFilter = BankCardTypeFilter.ALL,
+    val networkFilter: BankCardNetworkFilter = BankCardNetworkFilter.ALL,
     val isLoading: Boolean = true,
     val isFormOpen: Boolean = false,
     val editingCard: BankCard? = null,
@@ -100,8 +106,18 @@ class ManageBankCardsViewModel @Inject constructor(
         applyFilterAndSearch()
     }
 
-    fun onFilterChanged(filter: BankCardFilter) {
-        _uiState.update { it.copy(activeFilter = filter) }
+    fun onTypeFilterChanged(filter: BankCardTypeFilter) {
+        _uiState.update { 
+            it.copy(
+                typeFilter = filter,
+                networkFilter = if (filter == BankCardTypeFilter.ALL) BankCardNetworkFilter.ALL else it.networkFilter
+            ) 
+        }
+        applyFilterAndSearch()
+    }
+
+    fun onNetworkFilterChanged(filter: BankCardNetworkFilter) {
+        _uiState.update { it.copy(networkFilter = filter) }
         applyFilterAndSearch()
     }
 
@@ -109,15 +125,22 @@ class ManageBankCardsViewModel @Inject constructor(
         val state = _uiState.value
         var list = state.bankCards
 
-        // Apply filter
-        list = when (state.activeFilter) {
-            BankCardFilter.ALL -> list
-            BankCardFilter.CREDIT -> list.filter { it.cardType == BankCardType.CREDIT }
-            BankCardFilter.DEBIT -> list.filter { it.cardType == BankCardType.DEBIT }
-            BankCardFilter.RUPAY -> list.filter { it.network == CardNetwork.RUPAY }
-            BankCardFilter.VISA -> list.filter { it.network == CardNetwork.VISA }
-            BankCardFilter.MASTERCARD -> list.filter { it.network == CardNetwork.MASTERCARD }
-            BankCardFilter.WITH_TARGET -> list.filter { it.hasSpendTarget }
+        // Apply Card Type filter (All, Credit, Debit)
+        list = when (state.typeFilter) {
+            BankCardTypeFilter.ALL -> list
+            BankCardTypeFilter.CREDIT -> list.filter { it.cardType == BankCardType.CREDIT }
+            BankCardTypeFilter.DEBIT -> list.filter { it.cardType == BankCardType.DEBIT }
+        }
+
+        // Apply Network filter if Credit or Debit is selected
+        if (state.typeFilter != BankCardTypeFilter.ALL && state.networkFilter != BankCardNetworkFilter.ALL) {
+            list = when (state.networkFilter) {
+                BankCardNetworkFilter.ALL -> list
+                BankCardNetworkFilter.RUPAY -> list.filter { it.network == CardNetwork.RUPAY }
+                BankCardNetworkFilter.VISA -> list.filter { it.network == CardNetwork.VISA }
+                BankCardNetworkFilter.MASTERCARD -> list.filter { it.network == CardNetwork.MASTERCARD }
+                BankCardNetworkFilter.AMEX -> list.filter { it.network == CardNetwork.AMEX }
+            }
         }
 
         // Apply search query

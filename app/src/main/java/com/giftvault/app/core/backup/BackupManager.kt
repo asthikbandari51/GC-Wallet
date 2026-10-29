@@ -52,53 +52,76 @@ class BackupManager @Inject constructor(
         encodeDefaults = true
         coerceInputValues = true
     }
-    private val currentVersion = 4
+    private val currentVersion = 5
 
-    suspend fun createBackupDataJsonBytes(): ByteArray = withContext(Dispatchers.IO) {
-        val cards = cardDao.getAllCards().first()
+    private suspend fun buildPortableBackupData(): BackupData {
+        val rawCards = cardDao.getAllCards().first()
+        val rawBankCards = bankCardDao.getAllBankCards().first()
         val transactions = transactionDao.getAllTransactions().first()
         val reminders = reminderDao.getAllReminders().first()
         val receipts = receiptDao.getAllReceipts().first()
-        val bankCards = bankCardDao.getAllBankCards().first()
         val claims = truzteeClaimDao.getAllClaims().first()
         val perkQuotas = perkQuotaDao.getAllQuotas().first()
 
-        val backupData = BackupData(
+        // Decrypt sensitive fields using local cryptoManager so the backup JSON stores
+        // device-independent plaintext protected exclusively by the backup file's password
+        val portableCards = rawCards.map { card ->
+            val decNum = cryptoManager.decrypt(card.encryptedCardNumber)
+            val plainNum = if (decNum.isNotBlank()) decNum else card.encryptedCardNumber
+
+            val decPin = card.encryptedPin?.let { pinStr ->
+                val p = cryptoManager.decrypt(pinStr)
+                if (p.isNotBlank()) p else pinStr
+            }
+
+            card.copy(
+                encryptedCardNumber = plainNum,
+                encryptedPin = decPin
+            )
+        }
+
+        val portableBankCards = rawBankCards.map { bCard ->
+            val decNum = cryptoManager.decrypt(bCard.encryptedCardNumber)
+            val plainNum = if (decNum.isNotBlank()) decNum else bCard.encryptedCardNumber
+
+            val decCvv = cryptoManager.decrypt(bCard.encryptedCvv)
+            val plainCvv = if (decCvv.isNotBlank()) decCvv else bCard.encryptedCvv
+
+            val decMonth = cryptoManager.decrypt(bCard.encryptedExpiryMonth)
+            val plainMonth = if (decMonth.isNotBlank()) decMonth else bCard.encryptedExpiryMonth
+
+            val decYear = cryptoManager.decrypt(bCard.encryptedExpiryYear)
+            val plainYear = if (decYear.isNotBlank()) decYear else bCard.encryptedExpiryYear
+
+            bCard.copy(
+                encryptedCardNumber = plainNum,
+                encryptedCvv = plainCvv,
+                encryptedExpiryMonth = plainMonth,
+                encryptedExpiryYear = plainYear
+            )
+        }
+
+        return BackupData(
             version = currentVersion,
             timestamp = System.currentTimeMillis(),
-            cards = cards,
+            cards = portableCards,
             transactions = transactions,
             reminders = reminders,
             receipts = receipts,
-            bankCards = bankCards,
+            bankCards = portableBankCards,
             claims = claims,
             perkQuotas = perkQuotas
         )
+    }
+
+    suspend fun createBackupDataJsonBytes(): ByteArray = withContext(Dispatchers.IO) {
+        val backupData = buildPortableBackupData()
         json.encodeToString(backupData).toByteArray(StandardCharsets.UTF_8)
     }
 
     suspend fun exportBackup(password: String, destinationUri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val cards = cardDao.getAllCards().first()
-            val transactions = transactionDao.getAllTransactions().first()
-            val reminders = reminderDao.getAllReminders().first()
-            val receipts = receiptDao.getAllReceipts().first()
-            val bankCards = bankCardDao.getAllBankCards().first()
-            val claims = truzteeClaimDao.getAllClaims().first()
-            val perkQuotas = perkQuotaDao.getAllQuotas().first()
-
-            val backupData = BackupData(
-                version = currentVersion,
-                timestamp = System.currentTimeMillis(),
-                cards = cards,
-                transactions = transactions,
-                reminders = reminders,
-                receipts = receipts,
-                bankCards = bankCards,
-                claims = claims,
-                perkQuotas = perkQuotas
-            )
-
+            val backupData = buildPortableBackupData()
             val jsonStr = json.encodeToString(backupData)
             val jsonBytes = jsonStr.toByteArray(StandardCharsets.UTF_8)
 

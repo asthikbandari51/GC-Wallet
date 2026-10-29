@@ -128,21 +128,41 @@ fun ManageBankCardsScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            // Horizontally Scrollable Glass Filter Pills
-            LazyRow(
+            // Hierarchical Filter Pills: Level 1 (Card Type: All, Credit, Debit)
+            Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 14.dp)
+                    .padding(bottom = if (uiState.typeFilter != BankCardTypeFilter.ALL) 8.dp else 14.dp)
             ) {
-                items(BankCardFilter.entries.toTypedArray()) { filter ->
-                    val isSelected = uiState.activeFilter == filter
+                BankCardTypeFilter.entries.forEach { filter ->
+                    val isSelected = uiState.typeFilter == filter
                     LiquidGlassChip(
                         selected = isSelected,
-                        onClick = { viewModel.onFilterChanged(filter) },
+                        onClick = { viewModel.onTypeFilterChanged(filter) },
                         label = filter.displayName,
                         tokens = tokens
                     )
+                }
+            }
+
+            // Level 2 Sub-Filter: Appears only when Credit or Debit is selected (All Networks, RuPay, Visa, Mastercard, Amex)
+            AnimatedVisibility(visible = uiState.typeFilter != BankCardTypeFilter.ALL) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 14.dp)
+                ) {
+                    items(BankCardNetworkFilter.entries.toTypedArray()) { netFilter ->
+                        val isNetSelected = uiState.networkFilter == netFilter
+                        LiquidGlassChip(
+                            selected = isNetSelected,
+                            onClick = { viewModel.onNetworkFilterChanged(netFilter) },
+                            label = netFilter.displayName,
+                            tokens = tokens
+                        )
+                    }
                 }
             }
 
@@ -214,7 +234,7 @@ fun ManageBankCardsScreen(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 88.dp)
+                    contentPadding = PaddingValues(bottom = 20.dp)
                 ) {
                     items(uiState.filteredCards, key = { it.id }) { card ->
                         val isRevealed = uiState.revealedCardIds.contains(card.id)

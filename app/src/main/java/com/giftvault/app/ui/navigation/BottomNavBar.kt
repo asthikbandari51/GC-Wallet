@@ -63,7 +63,7 @@ fun GiftVaultBottomNavBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 4.dp)
         ) {
             LiquidGlassSurface(
                 modifier = Modifier

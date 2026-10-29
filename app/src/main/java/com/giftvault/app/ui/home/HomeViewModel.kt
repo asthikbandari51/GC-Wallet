@@ -127,17 +127,22 @@ class HomeViewModel @Inject constructor(
 
         val favoriteCards = activeCards.filter { it.isFavorite }
 
-        val categoryGroup = activeCards.groupBy { it.category }
-        val topCat = categoryGroup.maxByOrNull { it.value.size }?.key
-
-        val favoriteBrandName = favoriteCards.firstOrNull()?.merchantName
-            ?: activeCards.groupBy { it.merchantName }.maxByOrNull { it.value.size }?.key
-
-        val catBalances = categoryGroup.map { (cat, cards) ->
+        val spendableCategoryGroup = spendableCards.groupBy { it.category }
+        val catBalances = spendableCategoryGroup.map { (cat, cards) ->
             val catTotal = cards.sumOf { it.balance }
-            val pct = if (totalBalance > 0.0) (catTotal / totalBalance).toFloat() else 0f
+            val pct = if (totalBalance > 0.0) ((catTotal / totalBalance).toFloat()).coerceIn(0f, 1f) else 0f
             CategoryBalance(cat, catTotal, pct)
         }.sortedByDescending { it.totalBalance }
+
+        val topCat = catBalances.firstOrNull()?.category 
+            ?: activeCards.groupBy { it.category }.maxByOrNull { it.value.size }?.key
+
+        val positiveCards = activeCards.filter { it.balance > 0 }
+        val favoriteBrandName = favoriteCards.firstOrNull()?.merchantName
+            ?: (if (positiveCards.isNotEmpty()) positiveCards else activeCards)
+                .groupBy { it.merchantName }
+                .maxByOrNull { it.value.size }
+                ?.key
 
         // Spend target calculation (Item 1: optional, only show if target > 0)
         val hasTarget: Boolean

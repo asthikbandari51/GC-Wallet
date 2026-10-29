@@ -662,9 +662,11 @@ fun HomeScreen(
 
                 // 8. Insights 2x2 Grid (Liquid Glass Cards)
                 item {
-                    val topCatShare = remember(uiState.totalBalance, uiState.categoryBalances) {
-                        val topBal = uiState.categoryBalances.firstOrNull()?.totalBalance ?: 0.0
-                        if (uiState.totalBalance > 0) ((topBal / uiState.totalBalance) * 100).toInt() else 0
+                    val topCatShare = remember(uiState.totalBalance, uiState.categoryBalances, uiState.topCategory) {
+                        if (uiState.topCategory != null && uiState.totalBalance > 0) {
+                            val topBal = uiState.categoryBalances.find { it.category == uiState.topCategory }?.totalBalance ?: 0.0
+                            ((topBal / uiState.totalBalance) * 100).toInt().coerceIn(0, 100)
+                        } else 0
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -699,8 +701,8 @@ fun HomeScreen(
                         ) {
                             GlassInsightCard(
                                 title = "Top Category",
-                                value = uiState.topCategory?.displayName ?: "Others",
-                                subtitle = "$topCatShare% of balance",
+                                value = uiState.topCategory?.displayName ?: "None",
+                                subtitle = if (uiState.topCategory != null) "$topCatShare% of balance" else "No cards yet",
                                 icon = Icons.Rounded.Category,
                                 iconTint = tokens.primaryAccent,
                                 modifier = Modifier.weight(1f),
@@ -709,8 +711,8 @@ fun HomeScreen(
 
                             GlassInsightCard(
                                 title = "Top Brand",
-                                value = uiState.favoriteBrand ?: "Retail",
-                                subtitle = "Most frequent",
+                                value = uiState.favoriteBrand ?: "None",
+                                subtitle = if (uiState.favoriteBrand != null) "Most frequent" else "No cards yet",
                                 icon = Icons.Rounded.Star,
                                 iconTint = Color(0xFFE11D48),
                                 modifier = Modifier.weight(1f),

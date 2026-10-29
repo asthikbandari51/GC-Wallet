@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -30,8 +31,11 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.giftvault.app.domain.model.CardCategory
@@ -87,18 +91,6 @@ fun VaultScreen(
                     }
                 },
                 actions = {
-                    if (uiState.filteredCards.isNotEmpty()) {
-                        LiquidGlassIconButton(
-                            onClick = { multiDeckCards = uiState.filteredCards },
-                            icon = Icons.Rounded.Style,
-                            contentDescription = "Checkout Deck",
-                            size = 38.dp,
-                            iconSize = 20.dp,
-                            tint = tokens.primaryAccent,
-                            tokens = tokens,
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-                    }
                     LiquidGlassIconButton(
                         onClick = onNavigateToAddCard,
                         icon = Icons.Rounded.Add,
@@ -621,63 +613,164 @@ private fun VaultRowCardItem(
                     tokens = tokens
                 )
 
-                DropdownMenu(
+                LiquidGlassCardMenuPopup(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("View Details") },
-                        leadingIcon = { Icon(Icons.Rounded.Visibility, contentDescription = null) },
-                        onClick = {
-                            showMenu = false
-                            onClick()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Copy Card Code") },
-                        leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
-                        onClick = {
-                            showMenu = false
-                            onCopyCode()
-                        }
-                    )
-                    if (card.status == CardStatus.ARCHIVED) {
-                        DropdownMenuItem(
-                            text = { Text("Restore Card") },
-                            leadingIcon = { Icon(Icons.Rounded.Unarchive, contentDescription = null) },
-                            onClick = {
-                                showMenu = false
-                                onUnarchiveCard()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete Permanently", color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                onDeleteCard()
-                            }
-                        )
-                    } else {
-                        DropdownMenuItem(
-                            text = { Text("Archive Card") },
-                            leadingIcon = { Icon(Icons.Rounded.Archive, contentDescription = null) },
-                            onClick = {
-                                showMenu = false
-                                onArchiveCard()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete Card", color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                onDeleteCard()
-                            }
-                        )
+                    onDismissRequest = { showMenu = false },
+                    card = card,
+                    onViewDetails = onClick,
+                    onCopyCode = onCopyCode,
+                    onArchiveCard = onArchiveCard,
+                    onUnarchiveCard = onUnarchiveCard,
+                    onDeleteCard = onDeleteCard,
+                    tokens = tokens
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiquidGlassCardMenuPopup(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    card: GiftCard,
+    onViewDetails: () -> Unit,
+    onCopyCode: () -> Unit,
+    onArchiveCard: () -> Unit,
+    onUnarchiveCard: () -> Unit,
+    onDeleteCard: () -> Unit,
+    tokens: LiquidGlassTokens
+) {
+    if (!expanded) return
+
+    Popup(
+        alignment = Alignment.TopEnd,
+        offset = IntOffset(x = 0, y = 36),
+        onDismissRequest = onDismissRequest,
+        properties = PopupProperties(
+            focusable = true,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        LiquidGlassSurface(
+            modifier = Modifier
+                .width(200.dp)
+                .clip(RoundedCornerShape(18.dp)),
+            shape = RoundedCornerShape(18.dp),
+            elevation = 14.dp,
+            surfaceBrush = if (tokens.isDark) tokens.elevatedGradient else tokens.surfaceGradient,
+            borderBrush = tokens.activeBorderGradient,
+            borderWidth = 1.2.dp,
+            tokens = tokens
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+            ) {
+                MenuGlassItem(
+                    text = "View Details",
+                    icon = Icons.Rounded.Visibility,
+                    tint = tokens.primaryAccent,
+                    tokens = tokens,
+                    onClick = {
+                        onDismissRequest()
+                        onViewDetails()
                     }
+                )
+
+                MenuGlassItem(
+                    text = "Copy Card Code",
+                    icon = Icons.Rounded.ContentCopy,
+                    tint = tokens.textPrimary,
+                    tokens = tokens,
+                    onClick = {
+                        onDismissRequest()
+                        onCopyCode()
+                    }
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    color = tokens.border.copy(alpha = 0.35f)
+                )
+
+                if (card.status == CardStatus.ARCHIVED) {
+                    MenuGlassItem(
+                        text = "Restore Card",
+                        icon = Icons.Rounded.Unarchive,
+                        tint = tokens.primaryAccent,
+                        tokens = tokens,
+                        onClick = {
+                            onDismissRequest()
+                            onUnarchiveCard()
+                        }
+                    )
+                    MenuGlassItem(
+                        text = "Delete Forever",
+                        icon = Icons.Rounded.DeleteForever,
+                        tint = Color(0xFFEF4444),
+                        tokens = tokens,
+                        onClick = {
+                            onDismissRequest()
+                            onDeleteCard()
+                        }
+                    )
+                } else {
+                    MenuGlassItem(
+                        text = "Archive Card",
+                        icon = Icons.Rounded.Archive,
+                        tint = tokens.textSecondary,
+                        tokens = tokens,
+                        onClick = {
+                            onDismissRequest()
+                            onArchiveCard()
+                        }
+                    )
+                    MenuGlassItem(
+                        text = "Delete Card",
+                        icon = Icons.Rounded.Delete,
+                        tint = Color(0xFFEF4444),
+                        tokens = tokens,
+                        onClick = {
+                            onDismissRequest()
+                            onDeleteCard()
+                        }
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MenuGlassItem(
+    text: String,
+    icon: ImageVector,
+    tint: Color,
+    tokens: LiquidGlassTokens,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (tint == Color(0xFFEF4444)) tint else tokens.textPrimary
+        )
     }
 }

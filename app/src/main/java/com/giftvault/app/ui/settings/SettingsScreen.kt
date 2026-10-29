@@ -2,7 +2,10 @@ package com.giftvault.app.ui.settings
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -32,8 +35,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,6 +68,7 @@ fun SettingsScreen(
     var showRecycleBinDialog by remember { mutableStateOf(false) }
     var showCategoryExclusionDialog by remember { mutableStateOf(false) }
     var showExpiryWindowDialog by remember { mutableStateOf(false) }
+    var showBalanceCheckDialog by remember { mutableStateOf(false) }
     var showEditNameDialog by remember { mutableStateOf(false) }
     var editNameText by remember(uiState.userName) { mutableStateOf(uiState.userName ?: "") }
 
@@ -205,6 +211,16 @@ fun SettingsScreen(
                     subtitle = "${uiState.archivedCards.size} vouchers in bin • View, restore, or permanently delete",
                     icon = Icons.Rounded.DeleteSweep,
                     onClick = { showRecycleBinDialog = true }
+                )
+            }
+
+            // 🌐 Brand Balance Check Portals
+            SettingsGlassCard(title = "Brand Services & Utilities", icon = Icons.Rounded.TravelExplore) {
+                SettingsClickableRow(
+                    title = "Gift Card Balance Check",
+                    subtitle = "Official online portals (Myntra, Reliance, Apollo, Lakme, Decathlon, Kalyan)",
+                    icon = Icons.Rounded.AccountBalanceWallet,
+                    onClick = { showBalanceCheckDialog = true }
                 )
             }
 
@@ -631,6 +647,14 @@ fun SettingsScreen(
             }
         }
     }
+
+    // ── Gift Card Balance Check Dialog ──
+    if (showBalanceCheckDialog) {
+        BrandBalanceCheckDialog(
+            onDismissRequest = { showBalanceCheckDialog = false },
+            tokens = tokens
+        )
+    }
 }
 
 @Composable
@@ -806,6 +830,199 @@ fun ThemeSelection(
                     fontWeight = if (mode == selectedTheme) FontWeight.Bold else FontWeight.Normal,
                     color = tokens.textPrimary
                 )
+            }
+        }
+    }
+}
+
+data class BrandBalancePortal(
+    val brandName: String,
+    val category: String,
+    val url: String,
+    val note: String
+)
+
+private val balancePortals = listOf(
+    BrandBalancePortal(
+        brandName = "Myntra",
+        category = "Shopping",
+        url = "https://www.myntra.com/giftcard",
+        note = "Official Myntra gift card balance & management portal"
+    ),
+    BrandBalancePortal(
+        brandName = "Reliance Digital",
+        category = "Electronics",
+        url = "https://www.gyftr.com/",
+        note = "Gyftr Reliance Digital voucher balance portal"
+    ),
+    BrandBalancePortal(
+        brandName = "Apollo Pharmacy",
+        category = "Pharmacy",
+        url = "https://at.valuedesign.co.in/vdt/merchant/apollo/",
+        note = "ValueDesign Apollo Pharmacy balance check portal"
+    ),
+    BrandBalancePortal(
+        brandName = "Lakme Salon",
+        category = "Spa & Salon",
+        url = "https://www.woohoo.in/profile/check-balance",
+        note = "Woohoo Lakme Salon card balance check portal"
+    ),
+    BrandBalancePortal(
+        brandName = "Decathlon",
+        category = "Sports",
+        url = "https://www.decathlon.in/account/wallet?tab=wallet",
+        note = "Decathlon wallet & gift card balance check"
+    ),
+    BrandBalancePortal(
+        brandName = "Kalyan Jewellers",
+        category = "Jewellery",
+        url = "https://www.kalyanjewellers.net/gift-card/public/check-balance?utm_source=chatgpt.com",
+        note = "Kalyan Jewellers official public balance check"
+    )
+)
+
+@Composable
+private fun BrandBalanceCheckDialog(
+    onDismissRequest: () -> Unit,
+    tokens: LiquidGlassTokens
+) {
+    val context = LocalContext.current
+    var query by remember { mutableStateOf("") }
+    val clipboardManager = LocalClipboardManager.current
+
+    val filtered = remember(query) {
+        if (query.isBlank()) balancePortals
+        else balancePortals.filter {
+            it.brandName.contains(query.trim(), ignoreCase = true) ||
+            it.category.contains(query.trim(), ignoreCase = true)
+        }
+    }
+
+    LiquidGlassDialog(
+        onDismissRequest = onDismissRequest,
+        title = "Check Card Balance",
+        tokens = tokens,
+        dismissButton = {
+            LiquidGlassButton(
+                onClick = onDismissRequest,
+                text = "Close",
+                style = GlassButtonStyle.SECONDARY,
+                tokens = tokens
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                "Access official merchant portals directly to verify card balance and validity:",
+                style = MaterialTheme.typography.bodySmall,
+                color = tokens.textSecondary
+            )
+
+            LiquidGlassSearchBar(
+                query = query,
+                onQueryChange = { query = it },
+                placeholder = "Search brand or category...",
+                tokens = tokens,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 380.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(filtered, key = { it.brandName }) { portal ->
+                    LiquidGlassSurface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        surfaceBrush = tokens.surfaceGradient,
+                        borderBrush = tokens.borderGradient,
+                        borderWidth = 1.dp,
+                        tokens = tokens
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = portal.brandName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = tokens.textPrimary
+                                )
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = tokens.primaryAccent.copy(alpha = 0.12f)
+                                ) {
+                                    Text(
+                                        text = portal.category,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = tokens.primaryAccent,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(4.dp))
+
+                            Text(
+                                text = portal.note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = tokens.textSecondary,
+                                fontSize = 11.sp
+                            )
+
+                            Spacer(Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LiquidGlassButton(
+                                    onClick = {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(portal.url)).apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    text = "Open Portal",
+                                    icon = Icons.Rounded.OpenInNew,
+                                    style = GlassButtonStyle.PRIMARY,
+                                    height = 36.dp,
+                                    tokens = tokens
+                                )
+
+                                LiquidGlassIconButton(
+                                    onClick = {
+                                        clipboardManager.setText(AnnotatedString(portal.url))
+                                        Toast.makeText(context, "${portal.brandName} link copied!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    icon = Icons.Rounded.ContentCopy,
+                                    contentDescription = "Copy Link",
+                                    size = 36.dp,
+                                    iconSize = 16.dp,
+                                    tokens = tokens
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
