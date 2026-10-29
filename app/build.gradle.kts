@@ -15,8 +15,8 @@ android {
         applicationId = "com.giftvault.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 90000
-        versionName = "9.00.00"
+        versionCode = 90100
+        versionName = "9.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
