@@ -15,7 +15,8 @@ import javax.inject.Singleton
 @Singleton
 class BankCardRepositoryImpl @Inject constructor(
     private val bankCardDao: BankCardDao,
-    private val cryptoManager: CryptoManager
+    private val cryptoManager: CryptoManager,
+    private val themeManager: com.giftvault.app.core.theme.ThemeManager
 ) : BankCardRepository {
 
     override fun getAllBankCards(): Flow<List<BankCard>> {
@@ -37,6 +38,7 @@ class BankCardRepositoryImpl @Inject constructor(
         if (card.isPrimary) {
             bankCardDao.clearOtherPrimaries(id)
         }
+        themeManager.incrementChangesSinceBackup()
         return id
     }
 
@@ -45,10 +47,12 @@ class BankCardRepositoryImpl @Inject constructor(
         if (card.isPrimary) {
             bankCardDao.clearOtherPrimaries(card.id)
         }
+        themeManager.incrementChangesSinceBackup()
     }
 
     override suspend fun deleteBankCard(cardId: Long) {
         bankCardDao.deleteBankCardById(cardId)
+        themeManager.incrementChangesSinceBackup()
     }
 
     override suspend fun setPrimaryCard(cardId: Long) {

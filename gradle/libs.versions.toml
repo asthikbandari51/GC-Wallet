@@ -52,6 +52,7 @@ exifinterface = { group = "androidx.exifinterface", name = "exifinterface", vers
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version = "16.0.0" }
+zxing = { group = "com.google.zxing", name = "core", version = "3.5.3" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 junit-ext = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }

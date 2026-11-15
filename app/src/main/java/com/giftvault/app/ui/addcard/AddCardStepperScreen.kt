@@ -463,6 +463,19 @@ fun AddCardStepperScreen(
                         )
                     }
 
+                    OutlinedTextField(
+                        value = uiState.amountPaid,
+                        onValueChange = { viewModel.onAmountPaidChanged(it) },
+                        label = { Text("Amount Paid / Purchase Cost (Optional)") },
+                        placeholder = { Text("e.g. 4600 (calculates savings yield)", color = tokens.textTertiary) },
+                        leadingIcon = { Text("₹", fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = glassFieldColors,
+                        singleLine = true
+                    )
+
                     val calendar = Calendar.getInstance()
                     val datePickerDialog = DatePickerDialog(
                         context,
@@ -586,6 +599,67 @@ fun AddCardStepperScreen(
                         colors = glassFieldColors,
                         maxLines = 4
                     )
+                }
+            }
+
+            // 7. AESTHETICS & BADGE SECTION CARD
+            LiquidGlassSurface(
+                shape = RoundedCornerShape(20.dp),
+                elevation = 2.dp,
+                surfaceBrush = tokens.surfaceGradient,
+                borderBrush = tokens.borderGradient,
+                borderWidth = 1.dp,
+                modifier = Modifier.fillMaxWidth(),
+                tokens = tokens
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "BADGE & FINISH",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp,
+                        color = tokens.primaryAccent
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.badgeTag,
+                        onValueChange = { viewModel.onBadgeTagChanged(it) },
+                        label = { Text("Custom Badge Tag (Optional)") },
+                        placeholder = { Text("e.g. Quarterly, Corporate, Birthday", color = tokens.textTertiary) },
+                        leadingIcon = { Icon(Icons.Rounded.Label, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = glassFieldColors,
+                        singleLine = true
+                    )
+
+                    Text(
+                        "Card Finish Style",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = tokens.textSecondary
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val finishes = listOf(
+                            "DEFAULT" to "Default Glass",
+                            "OBSIDIAN" to "Obsidian Metallic",
+                            "SAPPHIRE" to "Sapphire Frost",
+                            "EMERALD" to "Emerald Glass",
+                            "AMETHYST" to "Amethyst Specular",
+                            "ROSE_GOLD" to "Rose Gold"
+                        )
+                        items(finishes) { (key, label) ->
+                            LiquidGlassChip(
+                                selected = uiState.customFinish == key,
+                                onClick = { viewModel.onCustomFinishChanged(key) },
+                                label = label,
+                                tokens = tokens
+                            )
+                        }
+                    }
                 }
             }
 

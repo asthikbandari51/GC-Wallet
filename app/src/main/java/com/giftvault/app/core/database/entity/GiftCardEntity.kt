@@ -23,5 +23,9 @@ data class GiftCardEntity(
     @ColumnInfo(name = "is_favorite") val isFavorite: Boolean = false,
     @ColumnInfo(name = "linked_card_id") val linkedCardId: Long? = null,
     @ColumnInfo(name = "created_at") val createdAt: Long,
-    @ColumnInfo(name = "updated_at") val updatedAt: Long
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    @ColumnInfo(name = "amount_paid", defaultValue = "0.0") val amountPaid: Double = 0.0,
+    @ColumnInfo(name = "custom_finish", defaultValue = "DEFAULT") val customFinish: String = "DEFAULT",
+    @ColumnInfo(name = "badge_tag") val badgeTag: String? = null,
+    @ColumnInfo(name = "is_decoy", defaultValue = "0") val isDecoy: Boolean = false
 )

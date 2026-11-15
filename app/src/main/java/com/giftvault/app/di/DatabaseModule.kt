@@ -23,6 +23,7 @@ object DatabaseModule {
             GiftVaultDatabase::class.java,
             "gift_vault_database"
         )
+            .addMigrations(GiftVaultDatabase.MIGRATION_5_6)
             .fallbackToDestructiveMigration()
             .build()
     }

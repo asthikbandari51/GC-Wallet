@@ -31,7 +31,10 @@ data class BankCard(
     val cardholderName: String = "",
     val isPrimary: Boolean = false,
     val quarterlySpendTarget: Double = 0.0, // 0.0 = no spend target
-    val currentQuarterSpend: Double = 0.0
+    val currentQuarterSpend: Double = 0.0,
+    val customFinish: String = "DEFAULT",
+    val badgeTag: String? = null,
+    val isDecoy: Boolean = false
 ) {
     val lastFourDigits: String
         get() = if (cardNumber.length >= 4) cardNumber.takeLast(4) else "••••"

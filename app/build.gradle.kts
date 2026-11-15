@@ -15,8 +15,8 @@ android {
         applicationId = "com.giftvault.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 90100
-        versionName = "9.1.0"
+        versionCode = 90200
+        versionName = "9.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
     implementation(libs.mlkit.text.recognition)
+    implementation(libs.zxing)
 
 
     testImplementation(libs.junit)

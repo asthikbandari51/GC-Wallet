@@ -27,7 +27,11 @@ fun GiftCardEntity.toDomain(decryptedNumber: String, decryptedPin: String?): Gif
         isFavorite = this.isFavorite,
         linkedCardId = this.linkedCardId,
         createdAt = Instant.ofEpochMilli(this.createdAt),
-        updatedAt = Instant.ofEpochMilli(this.updatedAt)
+        updatedAt = Instant.ofEpochMilli(this.updatedAt),
+        amountPaid = this.amountPaid,
+        customFinish = this.customFinish,
+        badgeTag = this.badgeTag,
+        isDecoy = this.isDecoy
     )
 }
 
@@ -48,6 +52,10 @@ fun GiftCard.toEntity(encryptedNumber: String, encryptedPin: String?): GiftCardE
         isFavorite = this.isFavorite,
         linkedCardId = this.linkedCardId,
         createdAt = this.createdAt.toEpochMilli(),
-        updatedAt = this.updatedAt.toEpochMilli()
+        updatedAt = this.updatedAt.toEpochMilli(),
+        amountPaid = this.amountPaid,
+        customFinish = this.customFinish,
+        badgeTag = this.badgeTag,
+        isDecoy = this.isDecoy
     )
 }

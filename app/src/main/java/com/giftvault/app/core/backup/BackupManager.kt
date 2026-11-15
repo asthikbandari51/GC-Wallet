@@ -45,7 +45,8 @@ class BackupManager @Inject constructor(
     private val bankCardDao: BankCardDao,
     private val truzteeClaimDao: TruzteeClaimDao,
     private val perkQuotaDao: PerkQuotaDao,
-    private val cryptoManager: CryptoManager
+    private val cryptoManager: CryptoManager,
+    private val themeManager: com.giftvault.app.core.theme.ThemeManager
 ) {
     private val json = Json { 
         ignoreUnknownKeys = true 
@@ -147,6 +148,7 @@ class BackupManager @Inject constructor(
                 os.write(encryptedData)
             }
 
+            themeManager.markBackupCompleted()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

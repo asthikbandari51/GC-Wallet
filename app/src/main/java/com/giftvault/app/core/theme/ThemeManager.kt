@@ -84,6 +84,76 @@ class ThemeManager @Inject constructor(
     )
     val requireAuthForCvv: StateFlow<Boolean> = _requireAuthForCvv.asStateFlow()
 
+    private val _isDecoyMode = MutableStateFlow(false)
+    val isDecoyMode: StateFlow<Boolean> = _isDecoyMode.asStateFlow()
+
+    private val _decoyPin = MutableStateFlow(prefs.getString("decoy_pin", null))
+    val decoyPin: StateFlow<String?> = _decoyPin.asStateFlow()
+
+    private val _changesSinceLastBackup = MutableStateFlow(prefs.getInt("changes_since_backup", 0))
+    val changesSinceLastBackup: StateFlow<Int> = _changesSinceLastBackup.asStateFlow()
+
+    private val _lastBackupTimestamp = MutableStateFlow(prefs.getLong("last_backup_timestamp", 0L))
+    val lastBackupTimestamp: StateFlow<Long> = _lastBackupTimestamp.asStateFlow()
+
+    private val _isHighContrastOutdoor = MutableStateFlow(prefs.getBoolean("high_contrast_outdoor", false))
+    val isHighContrastOutdoor: StateFlow<Boolean> = _isHighContrastOutdoor.asStateFlow()
+
+    private val _requireBiometricForSensitive = MutableStateFlow(prefs.getBoolean("require_biometric_sensitive", true))
+    val requireBiometricForSensitive: StateFlow<Boolean> = _requireBiometricForSensitive.asStateFlow()
+
+    private val _quietHoursEnabled = MutableStateFlow(prefs.getBoolean("quiet_hours_enabled", true))
+    val quietHoursEnabled: StateFlow<Boolean> = _quietHoursEnabled.asStateFlow()
+
+    private val _quietHoursStart = MutableStateFlow(prefs.getInt("quiet_hours_start", 22))
+    val quietHoursStart: StateFlow<Int> = _quietHoursStart.asStateFlow()
+
+    private val _quietHoursEnd = MutableStateFlow(prefs.getInt("quiet_hours_end", 8))
+    val quietHoursEnd: StateFlow<Int> = _quietHoursEnd.asStateFlow()
+
+    fun setDecoyMode(active: Boolean) {
+        _isDecoyMode.value = active
+    }
+
+    fun setDecoyPin(pin: String?) {
+        prefs.edit().putString("decoy_pin", pin).apply()
+        _decoyPin.value = pin
+    }
+
+    fun incrementChangesSinceBackup() {
+        val next = _changesSinceLastBackup.value + 1
+        prefs.edit().putInt("changes_since_backup", next).apply()
+        _changesSinceLastBackup.value = next
+    }
+
+    fun markBackupCompleted() {
+        val now = System.currentTimeMillis()
+        prefs.edit().putLong("last_backup_timestamp", now).putInt("changes_since_backup", 0).apply()
+        _lastBackupTimestamp.value = now
+        _changesSinceLastBackup.value = 0
+    }
+
+    fun setHighContrastOutdoor(enabled: Boolean) {
+        prefs.edit().putBoolean("high_contrast_outdoor", enabled).apply()
+        _isHighContrastOutdoor.value = enabled
+    }
+
+    fun setRequireBiometricForSensitive(require: Boolean) {
+        prefs.edit().putBoolean("require_biometric_sensitive", require).apply()
+        _requireBiometricForSensitive.value = require
+    }
+
+    fun setQuietHours(enabled: Boolean, startHour: Int = 22, endHour: Int = 8) {
+        prefs.edit()
+            .putBoolean("quiet_hours_enabled", enabled)
+            .putInt("quiet_hours_start", startHour)
+            .putInt("quiet_hours_end", endHour)
+            .apply()
+        _quietHoursEnabled.value = enabled
+        _quietHoursStart.value = startHour
+        _quietHoursEnd.value = endHour
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         prefs.edit().putString("theme_mode", mode.name).apply()
         _themeMode.value = mode

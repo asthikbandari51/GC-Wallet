@@ -1,5 +1,7 @@
 package com.giftvault.app
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,10 +15,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.rememberNavController
+import com.giftvault.app.core.ingestion.SmartIngestionManager
 import com.giftvault.app.core.security.BiometricAuthManager
+import com.giftvault.app.core.shortcuts.ShortcutHelper
 import com.giftvault.app.core.theme.ThemeManager
 import com.giftvault.app.ui.navigation.GiftVaultBottomNavBar
 import com.giftvault.app.ui.navigation.GiftVaultNavGraph
+import com.giftvault.app.ui.navigation.Screen
 import com.giftvault.app.ui.onboarding.OnboardingScreen
 import com.giftvault.app.ui.security.AppLockScreen
 import com.giftvault.app.ui.theme.GiftVaultTheme
@@ -32,6 +37,9 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var biometricAuthManager: BiometricAuthManager
 
+    @Inject
+    lateinit var smartIngestionManager: SmartIngestionManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -43,6 +51,7 @@ class MainActivity : FragmentActivity() {
             val isPrivacyMode by themeManager.isPrivacyModeEnabled.collectAsState()
             val userName by themeManager.userName.collectAsState()
             val appPin by themeManager.appPin.collectAsState()
+            val decoyPin by themeManager.decoyPin.collectAsState()
 
             var isAppLocked by remember { mutableStateOf(isAppLockEnabled || appPin != null) }
 
@@ -70,16 +79,39 @@ class MainActivity : FragmentActivity() {
                         AppLockScreen(
                             userName = userName,
                             savedPin = appPin,
+                            decoyPin = decoyPin,
                             biometricAuthManager = biometricAuthManager,
-                            onUnlocked = { isAppLocked = false }
+                            onUnlocked = {
+                                themeManager.setDecoyMode(false)
+                                isAppLocked = false
+                            },
+                            onDecoyUnlocked = {
+                                themeManager.setDecoyMode(true)
+                                isAppLocked = false
+                            }
                         )
                     }
                     else -> {
                         val navController = rememberNavController()
 
                         LaunchedEffect(intent) {
-                            if (intent?.action == "com.giftvault.ACTION_INGEST_VOUCHER") {
-                                navController.navigate(com.giftvault.app.ui.navigation.Screen.ADD_CARD.route)
+                            when (intent?.action) {
+                                "com.giftvault.ACTION_INGEST_VOUCHER" -> {
+                                    navController.navigate(Screen.ADD_CARD.route)
+                                }
+                                Intent.ACTION_SEND -> {
+                                    val sharedText = intent?.getStringExtra(Intent.EXTRA_TEXT)
+                                    if (!sharedText.isNullOrBlank()) {
+                                        smartIngestionManager.inspectAndDetect(sharedText)
+                                    }
+                                    navController.navigate(Screen.ADD_CARD.route)
+                                }
+                                ShortcutHelper.ACTION_OPEN_CARD -> {
+                                    val cardId = intent?.getStringExtra(ShortcutHelper.EXTRA_CARD_ID)
+                                    if (!cardId.isNullOrBlank()) {
+                                        navController.navigate("card_details/$cardId")
+                                    }
+                                }
                             }
                         }
 

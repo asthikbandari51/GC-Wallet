@@ -21,8 +21,15 @@ data class GiftCard(
     val isFavorite: Boolean,
     val linkedCardId: Long? = null,
     val createdAt: Instant,
-    val updatedAt: Instant
+    val updatedAt: Instant,
+    val amountPaid: Double = 0.0,
+    val customFinish: String = "DEFAULT",
+    val badgeTag: String? = null,
+    val isDecoy: Boolean = false
 ) {
+    val savingsAmount: Double
+        get() = if (amountPaid > 0.0 && initialValue > amountPaid) initialValue - amountPaid else 0.0
+
     val isExpired: Boolean
         get() = expiryDate != null && expiryDate.isBefore(LocalDate.now())
 

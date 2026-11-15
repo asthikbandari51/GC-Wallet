@@ -54,6 +54,9 @@ data class ManageBankCardsUiState(
     val spendTargetInput: String = "", // Optional: left blank or "0" means no target
     val currentSpendInput: String = "0",
     val isPrimaryInput: Boolean = false,
+    val badgeTagInput: String = "",
+    val customFinishInput: String = "DEFAULT",
+    val isNfcScanning: Boolean = false,
     val revealedCardIds: Set<Long> = emptySet(),
     val revealedCvvCardIds: Set<Long> = emptySet(),
     val isPrivacyMode: Boolean = false,
@@ -178,6 +181,9 @@ class ManageBankCardsViewModel @Inject constructor(
                 spendTargetInput = "", // blank by default (optional)
                 currentSpendInput = "0",
                 isPrimaryInput = it.bankCards.isEmpty(),
+                badgeTagInput = "",
+                customFinishInput = "DEFAULT",
+                isNfcScanning = false,
                 errorMessage = null
             )
         }
@@ -201,6 +207,9 @@ class ManageBankCardsViewModel @Inject constructor(
                 spendTargetInput = if (card.hasSpendTarget) card.quarterlySpendTarget.toInt().toString() else "",
                 currentSpendInput = card.currentQuarterSpend.toInt().toString(),
                 isPrimaryInput = card.isPrimary,
+                badgeTagInput = card.badgeTag ?: "",
+                customFinishInput = card.customFinish,
+                isNfcScanning = false,
                 errorMessage = null
             )
         }
@@ -250,6 +259,20 @@ class ManageBankCardsViewModel @Inject constructor(
     fun onSpendTargetChanged(value: String) = _uiState.update { it.copy(spendTargetInput = value.filter { c -> c.isDigit() || c == '.' }) }
     fun onCurrentSpendChanged(value: String) = _uiState.update { it.copy(currentSpendInput = value.filter { c -> c.isDigit() || c == '.' }) }
     fun onIsPrimaryChanged(value: Boolean) = _uiState.update { it.copy(isPrimaryInput = value) }
+    fun onBadgeTagChanged(value: String) = _uiState.update { it.copy(badgeTagInput = value) }
+    fun onCustomFinishChanged(value: String) = _uiState.update { it.copy(customFinishInput = value) }
+    fun setNfcScanning(scanning: Boolean) = _uiState.update { it.copy(isNfcScanning = scanning) }
+
+    fun applyNfcMetadata(cardNumber: String, expiryMonth: String, expiryYear: String, network: CardNetwork) {
+        _uiState.update {
+            it.copy(
+                cardNumberInput = cardNumber,
+                expiryMonthInput = expiryMonth,
+                expiryYearInput = expiryYear,
+                networkInput = network
+            )
+        }
+    }
 
     fun toggleCardDetailsReveal(cardId: Long) {
         _uiState.update {
@@ -304,7 +327,10 @@ class ManageBankCardsViewModel @Inject constructor(
             cardholderName = state.cardholderNameInput.trim().ifBlank { "Valued Cardholder" },
             isPrimary = state.isPrimaryInput,
             quarterlySpendTarget = if (target < 0.0) 0.0 else target,
-            currentQuarterSpend = currentSpend
+            currentQuarterSpend = currentSpend,
+            customFinish = state.customFinishInput,
+            badgeTag = state.badgeTagInput.ifBlank { null },
+            isDecoy = themeManager.isDecoyMode.value
         )
 
         viewModelScope.launch {

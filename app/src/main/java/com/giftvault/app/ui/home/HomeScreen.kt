@@ -48,6 +48,7 @@ fun HomeScreen(
     tokens: LiquidGlassTokens = currentGlassTokens()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showRupayPerksModal by remember { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onResume()
@@ -719,6 +720,31 @@ fun HomeScreen(
                                 tokens = tokens
                             )
                         }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            GlassInsightCard(
+                                title = "Lifetime Savings",
+                                value = if (uiState.isPrivacyMode) "₹ ••••" else "₹${String.format("%,.0f", uiState.lifetimeSavings)}",
+                                subtitle = "Discounts & Perks",
+                                icon = Icons.Rounded.Savings,
+                                iconTint = Color(0xFF10B981),
+                                modifier = Modifier.weight(1f),
+                                tokens = tokens
+                            )
+
+                            GlassInsightCard(
+                                title = "RuPay Perks",
+                                value = "${uiState.rupayBenefitSummaries.sumOf { it.claimedCount }} Claimed",
+                                subtitle = "Active quarter",
+                                icon = Icons.Rounded.WorkspacePremium,
+                                iconTint = Color(0xFFFFB800),
+                                modifier = Modifier.weight(1f),
+                                tokens = tokens
+                            )
+                        }
                     }
                 }
 
@@ -820,8 +846,31 @@ fun HomeScreen(
                         }
                     }
                 }
+
+                // 11. PNB Imperial RuPay Quarterly Perks Widget
+                if (uiState.rupayBenefitSummaries.isNotEmpty()) {
+                    item {
+                        PnbRupayPerksWidget(
+                            summaries = uiState.rupayBenefitSummaries,
+                            onOpenFullPerksModal = { showRupayPerksModal = true },
+                            modifier = Modifier.padding(top = 4.dp),
+                            tokens = tokens
+                        )
+                    }
+                }
             }
         }
+    }
+
+    if (showRupayPerksModal) {
+        com.giftvault.app.ui.rupay.RupayBenefitsModalSheet(
+            summaries = uiState.rupayBenefitSummaries,
+            unlinkedVouchers = uiState.unlinkedVouchers,
+            onDismissRequest = { showRupayPerksModal = false },
+            onViewVoucherDetails = onNavigateToCardDetails,
+            onLinkVoucherToCard = { voucherId, cardId -> viewModel.linkVoucherToCard(voucherId, cardId) },
+            tokens = tokens
+        )
     }
 }
 

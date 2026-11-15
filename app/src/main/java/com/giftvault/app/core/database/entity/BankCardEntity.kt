@@ -23,5 +23,8 @@ data class BankCardEntity(
     @ColumnInfo(name = "cardholder_name") val cardholderName: String,
     @ColumnInfo(name = "is_primary") val isPrimary: Boolean = false,
     @ColumnInfo(name = "quarterly_spend_target") val quarterlySpendTarget: Double = 0.0,
-    @ColumnInfo(name = "current_quarter_spend") val currentQuarterSpend: Double = 0.0
+    @ColumnInfo(name = "current_quarter_spend") val currentQuarterSpend: Double = 0.0,
+    @ColumnInfo(name = "custom_finish", defaultValue = "DEFAULT") val customFinish: String = "DEFAULT",
+    @ColumnInfo(name = "badge_tag") val badgeTag: String? = null,
+    @ColumnInfo(name = "is_decoy", defaultValue = "0") val isDecoy: Boolean = false
 )

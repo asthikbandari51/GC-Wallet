@@ -19,6 +19,13 @@ import androidx.compose.runtime.Immutable
 import com.giftvault.app.core.theme.ThemeManager
 import com.giftvault.app.domain.model.CardStatus
 
+import com.giftvault.app.core.rupay.PnbCardBenefitSummary
+import com.giftvault.app.core.rupay.RupayBenefitTracker
+import com.giftvault.app.data.repository.BankCardRepository
+import com.giftvault.app.domain.model.BankCard
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+
 @Immutable
 enum class SortOption(val displayName: String) {
     RECENTLY_ADDED("Recently Added"),
@@ -52,8 +59,16 @@ data class VaultUiState(
 class VaultViewModel @Inject constructor(
     private val getCardsUseCase: GetCardsUseCase,
     private val cardRepository: CardRepository,
-    private val themeManager: ThemeManager
+    private val bankCardRepository: BankCardRepository,
+    private val themeManager: ThemeManager,
+    private val rupayBenefitTracker: RupayBenefitTracker
 ) : ViewModel() {
+
+    val rupayBenefitSummaries: StateFlow<List<PnbCardBenefitSummary>> = rupayBenefitTracker.benefitSummaries
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val bankCards: StateFlow<List<BankCard>> = bankCardRepository.getAllBankCards()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _uiState = MutableStateFlow(VaultUiState())
     val uiState: StateFlow<VaultUiState> = _uiState.asStateFlow()
@@ -145,6 +160,25 @@ class VaultViewModel @Inject constructor(
     fun deleteCard(cardId: String) {
         viewModelScope.launch {
             cardRepository.deleteCard(cardId)
+        }
+    }
+
+    fun applyCheckoutRedemptions(deductions: List<Pair<GiftCard, Double>>) {
+        viewModelScope.launch {
+            deductions.forEach { (card, deductAmount) ->
+                val newBal = (card.balance - deductAmount).coerceAtLeast(0.0)
+                if (newBal == 0.0) {
+                    cardRepository.updateCard(card.copy(balance = 0.0, status = CardStatus.ARCHIVED))
+                } else {
+                    cardRepository.updateCard(card.copy(balance = newBal))
+                }
+            }
+        }
+    }
+
+    fun linkVoucherToCard(voucherId: String, cardId: Long) {
+        viewModelScope.launch {
+            rupayBenefitTracker.linkVoucherToCard(voucherId, cardId)
         }
     }
 

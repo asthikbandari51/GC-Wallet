@@ -40,17 +40,30 @@ import com.giftvault.app.ui.components.glass.LiquidGlassTokens
 fun AppLockScreen(
     userName: String?,
     savedPin: String?,
+    decoyPin: String? = null,
     biometricAuthManager: BiometricAuthManager,
-    onUnlocked: () -> Unit
+    onUnlocked: () -> Unit,
+    onDecoyUnlocked: () -> Unit = onUnlocked
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     var enteredPin by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var failedAttempts by remember { mutableStateOf(0) }
+    var lockoutSecondsRemaining by remember { mutableStateOf(0) }
+
+    LaunchedEffect(lockoutSecondsRemaining) {
+        if (lockoutSecondsRemaining > 0) {
+            kotlinx.coroutines.delay(1000)
+            lockoutSecondsRemaining -= 1
+        }
+    }
 
     val canUseBiometrics = remember {
         biometricAuthManager.canAuthenticate(context)
     }
+
+    val isLockedOut = lockoutSecondsRemaining > 0
 
     LaunchedEffect(Unit) {
         if (canUseBiometrics && context is FragmentActivity) {
@@ -220,15 +233,33 @@ fun AppLockScreen(
                                             }
                                         }
                                         else -> {
+                                            if (isLockedOut) return@KeypadButton
                                             if (enteredPin.length < 4) {
                                                 enteredPin += key
                                                 errorMessage = null
                                                 if (enteredPin.length == 4) {
-                                                    if (savedPin == null || enteredPin == savedPin) {
-                                                        onUnlocked()
-                                                    } else {
-                                                        errorMessage = "Incorrect PIN"
-                                                        enteredPin = ""
+                                                    when {
+                                                        decoyPin != null && enteredPin == decoyPin -> {
+                                                            failedAttempts = 0
+                                                            onDecoyUnlocked()
+                                                        }
+                                                        savedPin == null || enteredPin == savedPin -> {
+                                                            failedAttempts = 0
+                                                            onUnlocked()
+                                                        }
+                                                        else -> {
+                                                            failedAttempts += 1
+                                                            if (failedAttempts >= 10) {
+                                                                lockoutSecondsRemaining = 60
+                                                                errorMessage = "Too many attempts. Lockout active for 60s."
+                                                            } else if (failedAttempts >= 5) {
+                                                                lockoutSecondsRemaining = 30
+                                                                errorMessage = "Too many attempts. Lockout active for 30s."
+                                                            } else {
+                                                                errorMessage = "Incorrect PIN (${5 - failedAttempts} attempts remaining)"
+                                                            }
+                                                            enteredPin = ""
+                                                        }
                                                     }
                                                 }
                                             }

@@ -33,7 +33,8 @@ interface CardRepository {
 class CardRepositoryImpl @Inject constructor(
     private val dao: GiftCardDao,
     private val cryptoManager: CryptoManager,
-    private val receiptStorageManager: ReceiptStorageManager
+    private val receiptStorageManager: ReceiptStorageManager,
+    private val themeManager: com.giftvault.app.core.theme.ThemeManager
 ) : CardRepository {
 
     override fun getAllCards(): Flow<List<GiftCard>> = dao.getAllCards().map { entities ->
@@ -97,26 +98,31 @@ class CardRepositoryImpl @Inject constructor(
         val encryptedNumber = cryptoManager.encrypt(card.cardNumber)
         val encryptedPin = card.pin?.let { cryptoManager.encrypt(it) }
         dao.insertCard(card.toEntity(encryptedNumber, encryptedPin))
+        themeManager.incrementChangesSinceBackup()
     }
 
     override suspend fun updateCard(card: GiftCard) {
         val encryptedNumber = cryptoManager.encrypt(card.cardNumber)
         val encryptedPin = card.pin?.let { cryptoManager.encrypt(it) }
         dao.updateCard(card.toEntity(encryptedNumber, encryptedPin))
+        themeManager.incrementChangesSinceBackup()
     }
 
     override suspend fun deleteCard(id: String) {
         receiptStorageManager.deleteCardReceiptsDirectory(id)
         dao.deleteCardById(id)
+        themeManager.incrementChangesSinceBackup()
     }
 
     override suspend fun archiveCard(id: String) {
         val entity = dao.getCardByIdDirect(id) ?: return
         dao.updateCard(entity.copy(status = "archived", updatedAt = System.currentTimeMillis()))
+        themeManager.incrementChangesSinceBackup()
     }
 
     override suspend fun unarchiveCard(id: String) {
         val entity = dao.getCardByIdDirect(id) ?: return
         dao.updateCard(entity.copy(status = "active", updatedAt = System.currentTimeMillis()))
+        themeManager.incrementChangesSinceBackup()
     }
 }

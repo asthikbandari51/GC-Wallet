@@ -1,5 +1,6 @@
 package com.giftvault.app.ui.bankcards
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -36,10 +37,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.giftvault.app.core.nfc.NfcCardReader
 import com.giftvault.app.domain.model.BankCard
 import com.giftvault.app.domain.model.BankCardType
 import com.giftvault.app.domain.model.CardNetwork
 import com.giftvault.app.domain.model.CardTier
+import com.giftvault.app.ui.components.SpendProgressRing
 import com.giftvault.app.ui.components.glass.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +53,34 @@ fun ManageBankCardsScreen(
     tokens: LiquidGlassTokens = currentGlassTokens()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val nfcReader = remember { NfcCardReader(context) }
+
+    DisposableEffect(uiState.isNfcScanning) {
+        val activity = context as? Activity
+        if (uiState.isNfcScanning && activity != null) {
+            nfcReader.startReaderMode(
+                activity = activity,
+                onCardRead = { res ->
+                    viewModel.applyNfcMetadata(
+                        cardNumber = res.maskedPan,
+                        expiryMonth = res.expiryMonth,
+                        expiryYear = res.expiryYear,
+                        network = res.network
+                    )
+                    viewModel.setNfcScanning(false)
+                    Toast.makeText(context, "Contactless card read: ${res.network.displayName}", Toast.LENGTH_SHORT).show()
+                },
+                onError = { err ->
+                    viewModel.setNfcScanning(false)
+                    Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                }
+            )
+        }
+        onDispose {
+            activity?.let { nfcReader.stopReaderMode(it) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -266,6 +297,58 @@ fun ManageBankCardsScreen(
             tokens = tokens
         )
     }
+
+    if (uiState.isNfcScanning) {
+        LiquidGlassDialog(
+            onDismissRequest = { viewModel.setNfcScanning(false) },
+            title = "NFC Tap to Scan",
+            tokens = tokens,
+            confirmButton = {},
+            dismissButton = {
+                LiquidGlassButton(
+                    onClick = { viewModel.setNfcScanning(false) },
+                    text = "Cancel",
+                    style = GlassButtonStyle.SUBTLE,
+                    tokens = tokens
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(tokens.primaryAccent.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Nfc,
+                        contentDescription = null,
+                        tint = tokens.primaryAccent,
+                        modifier = Modifier.size(38.dp)
+                    )
+                }
+                Text(
+                    text = "Hold Card to Back of Phone",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = tokens.textPrimary
+                )
+                Text(
+                    text = "Reads public EMV card metadata (Network, Card Number, Expiry) offline. No sensitive CVV or banking data is transferred.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = tokens.textSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -390,6 +473,21 @@ private fun LiquidBankCardItem(
                                     )
                                 }
                             }
+                            if (!card.badgeTag.isNullOrBlank()) {
+                                Spacer(Modifier.width(4.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFFFFB800).copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        card.badgeTag.uppercase(),
+                                        color = Color(0xFFFFB800),
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 9.sp,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                         }
                         Text(
                             text = "${card.network.displayName} • ${card.tier.displayName}",
@@ -435,17 +533,20 @@ private fun LiquidBankCardItem(
 
             Spacer(Modifier.height(14.dp))
 
+            val cardFinishBrush = when (card.customFinish) {
+                "OBSIDIAN" -> Brush.linearGradient(listOf(Color(0xFF020617), Color(0xFF1E293B), Color(0xFF0F172A)))
+                "SAPPHIRE" -> Brush.linearGradient(listOf(Color(0xFF0C2461), Color(0xFF1E3799), Color(0xFF0F172A)))
+                "EMERALD" -> Brush.linearGradient(listOf(Color(0xFF064E3B), Color(0xFF047857), Color(0xFF022C22)))
+                "AMETHYST" -> Brush.linearGradient(listOf(Color(0xFF3B0764), Color(0xFF581C87), Color(0xFF1E1B4B)))
+                "ROSE_GOLD" -> Brush.linearGradient(listOf(Color(0xFF4C1D24), Color(0xFF702834), Color(0xFF381218)))
+                else -> Brush.linearGradient(listOf(Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0F172A)))
+            }
+
             // Realistic Physical Card Visual Panel
             LiquidGlassSurface(
                 shape = RoundedCornerShape(18.dp),
                 elevation = 4.dp,
-                surfaceBrush = Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF0F172A),
-                        Color(0xFF1E293B),
-                        Color(0xFF0F172A)
-                    )
-                ),
+                surfaceBrush = cardFinishBrush,
                 borderBrush = Brush.linearGradient(
                     colors = listOf(
                         Color.White.copy(alpha = 0.25f),
@@ -564,37 +665,50 @@ private fun LiquidBankCardItem(
             // Spend Milestone Tracker: ONLY SHOW IF CARD HAS SPEND TARGET > 0
             if (card.hasSpendTarget) {
                 Spacer(Modifier.height(14.dp))
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Quarterly Milestone (${card.quarterlyPercentage}%)",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = tokens.textSecondary
-                        )
-                        Text(
-                            if (isPrivacyMode) "₹•••• / ₹••••" else "₹${card.currentQuarterSpend.toInt()} / ₹${card.quarterlySpendTarget.toInt()}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = tokens.primaryAccent
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    SpendProgressRing(
+                        currentSpend = card.currentQuarterSpend,
+                        targetSpend = card.quarterlySpendTarget,
+                        size = 48.dp,
+                        strokeWidth = 5.dp,
+                        tokens = tokens
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Milestone (${card.quarterlyPercentage}%)",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = tokens.textSecondary
+                            )
+                            Text(
+                                if (isPrivacyMode) "₹•••• / ₹••••" else "₹${card.currentQuarterSpend.toInt()} / ₹${card.quarterlySpendTarget.toInt()}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = tokens.primaryAccent
+                            )
+                        }
+
+                        Spacer(Modifier.height(6.dp))
+
+                        LinearProgressIndicator(
+                            progress = { card.quarterlyPercentage / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(CircleShape),
+                            color = if (card.quarterlyPercentage >= 100f) Color(0xFF10B981) else tokens.primaryAccent,
+                            trackColor = if (tokens.isDark) Color(0x332A2D5C) else Color(0xFFEEEDFF)
                         )
                     }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    LinearProgressIndicator(
-                        progress = { card.quarterlyPercentage / 100f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(CircleShape),
-                        color = if (card.quarterlyPercentage >= 100f) Color(0xFF10B981) else tokens.primaryAccent,
-                        trackColor = if (tokens.isDark) Color(0x332A2D5C) else Color(0xFFEEEDFF)
-                    )
                 }
             }
 
@@ -672,16 +786,19 @@ private fun BankCardFormDialog(
             }
 
             // Live Updating Physical Card Preview
+            val previewBrush = when (uiState.customFinishInput) {
+                "OBSIDIAN" -> Brush.linearGradient(listOf(Color(0xFF020617), Color(0xFF1E293B), Color(0xFF0F172A)))
+                "SAPPHIRE" -> Brush.linearGradient(listOf(Color(0xFF0C2461), Color(0xFF1E3799), Color(0xFF0F172A)))
+                "EMERALD" -> Brush.linearGradient(listOf(Color(0xFF064E3B), Color(0xFF047857), Color(0xFF022C22)))
+                "AMETHYST" -> Brush.linearGradient(listOf(Color(0xFF3B0764), Color(0xFF581C87), Color(0xFF1E1B4B)))
+                "ROSE_GOLD" -> Brush.linearGradient(listOf(Color(0xFF4C1D24), Color(0xFF702834), Color(0xFF381218)))
+                else -> Brush.linearGradient(listOf(Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0F172A)))
+            }
+
             LiquidGlassSurface(
                 shape = RoundedCornerShape(18.dp),
                 elevation = 6.dp,
-                surfaceBrush = Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF0F172A),
-                        Color(0xFF1E293B),
-                        Color(0xFF0F172A)
-                    )
-                ),
+                surfaceBrush = previewBrush,
                 borderBrush = tokens.activeBorderGradient,
                 borderWidth = 1.2.dp,
                 modifier = Modifier
@@ -818,6 +935,43 @@ private fun BankCardFormDialog(
                 unfocusedTextColor = tokens.textPrimary
             )
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Contactless Tap", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = tokens.textPrimary)
+                LiquidGlassButton(
+                    onClick = { viewModel.setNfcScanning(true) },
+                    text = "NFC Tap to Scan",
+                    icon = Icons.Rounded.Nfc,
+                    style = GlassButtonStyle.SECONDARY,
+                    height = 36.dp,
+                    fontSize = 11.sp,
+                    tokens = tokens
+                )
+            }
+
+            Text("Liquid Glass Finish", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = tokens.textPrimary)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val finishes = listOf(
+                    "DEFAULT" to "Default",
+                    "OBSIDIAN" to "Obsidian",
+                    "SAPPHIRE" to "Sapphire",
+                    "EMERALD" to "Emerald",
+                    "AMETHYST" to "Amethyst",
+                    "ROSE_GOLD" to "Rose Gold"
+                )
+                items(finishes) { (key, label) ->
+                    LiquidGlassChip(
+                        selected = uiState.customFinishInput == key,
+                        onClick = { viewModel.onCustomFinishChanged(key) },
+                        label = label,
+                        tokens = tokens
+                    )
+                }
+            }
+
             // GROUP 1: CARD IDENTITY
             Text("Card Identity", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = tokens.textPrimary)
 
@@ -827,6 +981,18 @@ private fun BankCardFormDialog(
                 onValueChange = { viewModel.onNicknameChanged(it) },
                 label = { Text("Card Nickname *") },
                 placeholder = { Text("e.g. PNB Select Imperial", color = tokens.textTertiary) },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = glassTextFieldColors,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Badge / Tag
+            OutlinedTextField(
+                value = uiState.badgeTagInput,
+                onValueChange = { viewModel.onBadgeTagChanged(it) },
+                label = { Text("Badge / Tag (e.g. Salary, Corporate, Add-on)") },
+                placeholder = { Text("e.g. Add-on, Corporate", color = tokens.textTertiary) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 colors = glassTextFieldColors,

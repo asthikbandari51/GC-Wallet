@@ -31,7 +31,14 @@ data class SettingsUiState(
     val expiryAlertDays: Int = 30,
     val excludedCategories: Set<String> = setOf(CardCategory.OTT_STREAMING.name),
     val archivedCards: List<GiftCard> = emptyList(),
-    val appVersion: String = "2.1.0"
+    val appVersion: String = "9.2.0",
+    val changesSinceLastBackup: Int = 0,
+    val isHighContrastOutdoor: Boolean = false,
+    val requireBiometricForSensitive: Boolean = false,
+    val quietHoursEnabled: Boolean = false,
+    val quietHoursStart: Int = 22,
+    val quietHoursEnd: Int = 7,
+    val hasDecoyPin: Boolean = false
 )
 
 @HiltViewModel
@@ -55,7 +62,11 @@ class SettingsViewModel @Inject constructor(
                 themeManager.requireAuthForCvv,
                 themeManager.expiryAlertDays,
                 themeManager.excludedCategoriesFromBalance,
-                cardRepository.getAllCards()
+                cardRepository.getAllCards(),
+                themeManager.changesSinceLastBackup,
+                themeManager.isHighContrastOutdoor,
+                themeManager.requireBiometricForSensitive,
+                themeManager.quietHoursEnabled
             ) { values ->
                 val name = values[0] as String?
                 val mode = values[1] as ThemeMode
@@ -69,6 +80,10 @@ class SettingsViewModel @Inject constructor(
                 @Suppress("UNCHECKED_CAST")
                 val allCards = values[8] as List<GiftCard>
                 val archived = allCards.filter { it.status == CardStatus.ARCHIVED }
+                val changes = values[9] as Int
+                val highContrast = values[10] as Boolean
+                val reqBiometric = values[11] as Boolean
+                val quietHours = values[12] as Boolean
 
                 SettingsUiState(
                     userName = name,
@@ -80,12 +95,35 @@ class SettingsViewModel @Inject constructor(
                     expiryAlertDays = expiryDays,
                     excludedCategories = excluded,
                     archivedCards = archived,
-                    appVersion = "2.1.0"
+                    appVersion = "9.2.0",
+                    changesSinceLastBackup = changes,
+                    isHighContrastOutdoor = highContrast,
+                    requireBiometricForSensitive = reqBiometric,
+                    quietHoursEnabled = quietHours,
+                    quietHoursStart = themeManager.quietHoursStart.value,
+                    quietHoursEnd = themeManager.quietHoursEnd.value,
+                    hasDecoyPin = !themeManager.decoyPin.value.isNullOrBlank()
                 )
             }.collect { state ->
                 _uiState.value = state
             }
         }
+    }
+
+    fun setHighContrastOutdoor(enabled: Boolean) {
+        themeManager.setHighContrastOutdoor(enabled)
+    }
+
+    fun setRequireBiometricForSensitive(enabled: Boolean) {
+        themeManager.setRequireBiometricForSensitive(enabled)
+    }
+
+    fun setQuietHours(enabled: Boolean, startHour: Int = 22, endHour: Int = 7) {
+        themeManager.setQuietHours(enabled, startHour, endHour)
+    }
+
+    fun setDecoyPin(pin: String?) {
+        themeManager.setDecoyPin(pin)
     }
 
     fun setUserName(name: String) {

@@ -54,10 +54,14 @@ fun VaultScreen(
     tokens: LiquidGlassTokens = currentGlassTokens()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val rupaySummaries by viewModel.rupayBenefitSummaries.collectAsState()
+    val bankCards by viewModel.bankCards.collectAsState()
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     var showSortPopup by remember { mutableStateOf(false) }
     var multiDeckCards by remember { mutableStateOf<List<GiftCard>?>(null) }
+    var showRupayBenefitsDialog by remember { mutableStateOf(false) }
+    var showCheckoutStackerDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -91,6 +95,26 @@ fun VaultScreen(
                     }
                 },
                 actions = {
+                    LiquidGlassIconButton(
+                        onClick = { showRupayBenefitsDialog = true },
+                        icon = Icons.Rounded.WorkspacePremium,
+                        contentDescription = "RuPay Perks & Vouchers",
+                        size = 38.dp,
+                        iconSize = 22.dp,
+                        tint = Color(0xFFFFB800),
+                        tokens = tokens,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                    LiquidGlassIconButton(
+                        onClick = { showCheckoutStackerDialog = true },
+                        icon = Icons.Rounded.Layers,
+                        contentDescription = "Checkout Stacker",
+                        size = 38.dp,
+                        iconSize = 22.dp,
+                        tint = tokens.primaryAccent,
+                        tokens = tokens,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
                     LiquidGlassIconButton(
                         onClick = onNavigateToAddCard,
                         icon = Icons.Rounded.Add,
@@ -466,6 +490,35 @@ fun VaultScreen(
             onMarkCardRedeemed = { cardId ->
                 viewModel.deleteCard(cardId)
             }
+        )
+    }
+
+    if (showRupayBenefitsDialog) {
+        com.giftvault.app.ui.rupay.RupayBenefitsModalSheet(
+            summaries = rupaySummaries,
+            unlinkedVouchers = uiState.cards.filter { it.linkedCardId == null && it.status != CardStatus.ARCHIVED },
+            onDismissRequest = { showRupayBenefitsDialog = false },
+            onViewVoucherDetails = { voucherId ->
+                showRupayBenefitsDialog = false
+                onNavigateToCardDetails(voucherId)
+            },
+            onLinkVoucherToCard = { voucherId, cardId ->
+                viewModel.linkVoucherToCard(voucherId, cardId)
+            },
+            tokens = tokens
+        )
+    }
+
+    if (showCheckoutStackerDialog) {
+        com.giftvault.app.ui.components.CheckoutStackerDialog(
+            allCards = uiState.cards.filter { it.status != CardStatus.ARCHIVED },
+            bankCards = bankCards,
+            onDismissRequest = { showCheckoutStackerDialog = false },
+            onApplyRedemptions = { deductions ->
+                viewModel.applyCheckoutRedemptions(deductions)
+                showCheckoutStackerDialog = false
+            },
+            tokens = tokens
         )
     }
 }

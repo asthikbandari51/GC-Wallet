@@ -20,6 +20,12 @@ import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 
+import com.giftvault.app.core.rupay.PnbCardBenefitSummary
+import com.giftvault.app.core.rupay.RupayBenefitTracker
+import com.giftvault.app.core.shortcuts.ShortcutHelper
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
+
 @Immutable
 data class CategoryBalance(
     val category: CardCategory,
@@ -44,6 +50,9 @@ data class HomeUiState(
     val hasSpendTarget: Boolean = false,
     val quarterlySpendTarget: Double = 0.0,
     val currentQuarterSpend: Double = 0.0,
+    val lifetimeSavings: Double = 0.0,
+    val rupayBenefitSummaries: List<PnbCardBenefitSummary> = emptyList(),
+    val unlinkedVouchers: List<GiftCard> = emptyList(),
     val isPrivacyMode: Boolean = false,
     val isLoading: Boolean = true
 )
@@ -60,11 +69,13 @@ private data class UserAndBankBundle(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val getCardsUseCase: GetCardsUseCase,
     private val cardRepository: CardRepository,
     private val bankCardRepository: BankCardRepository,
     private val smartIngestionManager: SmartIngestionManager,
-    private val themeManager: ThemeManager
+    private val themeManager: ThemeManager,
+    private val rupayBenefitTracker: RupayBenefitTracker
 ) : ViewModel() {
 
     private val _activeBankCardId = MutableStateFlow<Long?>(null)
@@ -97,8 +108,9 @@ class HomeViewModel @Inject constructor(
 
     val uiState: StateFlow<HomeUiState> = combine(
         getCardsUseCase.invoke(),
-        userAndBankBundle
-    ) { rawCards, userData ->
+        userAndBankBundle,
+        rupayBenefitTracker.benefitSummaries
+    ) { rawCards, userData, perkSummaries ->
         val activeCardId = userData.activeCardId
         val activeCard = userData.bankCards.find { it.id == activeCardId }
 
@@ -144,6 +156,13 @@ class HomeViewModel @Inject constructor(
                 .maxByOrNull { it.value.size }
                 ?.key
 
+        // Lifetime savings = discount on purchase + claimed RuPay perk allowances
+        val lifetimeSavings = activeCards.sumOf { it.savingsAmount } + perkSummaries.sumOf { it.totalClaimedValue }
+        val unlinkedVouchers = rawCards.filter { it.linkedCardId == null && it.status != com.giftvault.app.domain.model.CardStatus.ARCHIVED }
+
+        // Sync Android launcher dynamic shortcuts
+        ShortcutHelper.updateDynamicShortcuts(context, activeCards)
+
         // Spend target calculation (Item 1: optional, only show if target > 0)
         val hasTarget: Boolean
         val qTarget: Double
@@ -176,6 +195,9 @@ class HomeViewModel @Inject constructor(
             hasSpendTarget = hasTarget,
             quarterlySpendTarget = qTarget,
             currentQuarterSpend = qSpend,
+            lifetimeSavings = lifetimeSavings,
+            rupayBenefitSummaries = perkSummaries,
+            unlinkedVouchers = unlinkedVouchers,
             isPrivacyMode = userData.isPrivacyMode,
             isLoading = false
         )
@@ -184,6 +206,12 @@ class HomeViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState()
     )
+
+    fun linkVoucherToCard(voucherId: String, cardId: Long) {
+        viewModelScope.launch {
+            rupayBenefitTracker.linkVoucherToCard(voucherId, cardId)
+        }
+    }
 
     fun selectBankCard(cardId: Long?) {
         _activeBankCardId.value = cardId

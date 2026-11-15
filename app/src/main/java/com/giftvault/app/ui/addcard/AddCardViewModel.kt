@@ -17,6 +17,7 @@ import com.giftvault.app.domain.model.GiftCard
 import com.giftvault.app.domain.model.GiftCardParseResult
 import com.giftvault.app.domain.model.ParseSourceType
 import com.giftvault.app.domain.usecase.AddCardUseCase
+import com.giftvault.app.core.theme.ThemeManager
 import com.giftvault.app.domain.usecase.ParseGiftCardUseCase
 import com.giftvault.app.domain.usecase.UpdateCardUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,6 +45,9 @@ data class AddCardUiState(
     val pin: String = "",
     val balance: String = "",
     val initialValue: String = "",
+    val amountPaid: String = "",
+    val customFinish: String = "DEFAULT",
+    val badgeTag: String = "",
     val currency: String = "INR",
     val expiryDate: LocalDate? = null,
     val category: CardCategory = CardCategory.OTHERS,
@@ -75,6 +79,7 @@ class AddCardViewModel @Inject constructor(
     private val templateRepository: TemplateRepository,
     private val receiptStorageManager: ReceiptStorageManager,
     private val parseGiftCardUseCase: ParseGiftCardUseCase,
+    private val themeManager: ThemeManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -123,6 +128,9 @@ class AddCardViewModel @Inject constructor(
                             pin = existingCard.pin ?: "",
                             balance = existingCard.balance.toString(),
                             initialValue = existingCard.initialValue.toString(),
+                            amountPaid = if (existingCard.amountPaid > 0) existingCard.amountPaid.toString() else "",
+                            customFinish = existingCard.customFinish,
+                            badgeTag = existingCard.badgeTag ?: "",
                             currency = existingCard.currency,
                             expiryDate = existingCard.expiryDate,
                             category = existingCard.category,
@@ -217,6 +225,18 @@ class AddCardViewModel @Inject constructor(
         _uiState.update { it.copy(initialValue = value) }
     }
 
+    fun onAmountPaidChanged(value: String) {
+        _uiState.update { it.copy(amountPaid = value.filter { c -> c.isDigit() || c == '.' }) }
+    }
+
+    fun onCustomFinishChanged(finish: String) {
+        _uiState.update { it.copy(customFinish = finish) }
+    }
+
+    fun onBadgeTagChanged(tag: String) {
+        _uiState.update { it.copy(badgeTag = tag) }
+    }
+
     fun onNotesChanged(notes: String) {
         _uiState.update { it.copy(notes = notes) }
     }
@@ -307,7 +327,11 @@ class AddCardViewModel @Inject constructor(
                     isFavorite = currentState.originalFavorite,
                     linkedCardId = currentState.selectedBankCardId,
                     createdAt = currentState.originalCreatedAt,
-                    updatedAt = Instant.now()
+                    updatedAt = Instant.now(),
+                    amountPaid = currentState.amountPaid.toDoubleOrNull() ?: 0.0,
+                    customFinish = currentState.customFinish,
+                    badgeTag = currentState.badgeTag.takeIf { it.isNotBlank() },
+                    isDecoy = themeManager.isDecoyMode.value
                 )
                 
                 if (currentState.isEditMode) {

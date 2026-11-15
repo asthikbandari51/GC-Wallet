@@ -37,7 +37,10 @@ fun BankCardEntity.toDomain(cryptoManager: CryptoManager): BankCard {
         cardholderName = this.cardholderName,
         isPrimary = this.isPrimary,
         quarterlySpendTarget = this.quarterlySpendTarget,
-        currentQuarterSpend = this.currentQuarterSpend
+        currentQuarterSpend = this.currentQuarterSpend,
+        customFinish = this.customFinish,
+        badgeTag = this.badgeTag,
+        isDecoy = this.isDecoy
     )
 }
 
@@ -62,6 +65,9 @@ fun BankCard.toEntity(cryptoManager: CryptoManager): BankCardEntity {
         cardholderName = this.cardholderName,
         isPrimary = this.isPrimary,
         quarterlySpendTarget = this.quarterlySpendTarget,
-        currentQuarterSpend = this.currentQuarterSpend
+        currentQuarterSpend = this.currentQuarterSpend,
+        customFinish = this.customFinish,
+        badgeTag = this.badgeTag,
+        isDecoy = this.isDecoy
     )
 }

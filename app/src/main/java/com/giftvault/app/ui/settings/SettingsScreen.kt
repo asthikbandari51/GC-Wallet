@@ -71,6 +71,9 @@ fun SettingsScreen(
     var showBalanceCheckDialog by remember { mutableStateOf(false) }
     var showEditNameDialog by remember { mutableStateOf(false) }
     var editNameText by remember(uiState.userName) { mutableStateOf(uiState.userName ?: "") }
+    var showDecoyPinDialog by remember { mutableStateOf(false) }
+    var decoyPinInput by remember { mutableStateOf("") }
+    var showQuietHoursDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -144,6 +147,13 @@ fun SettingsScreen(
                     selectedTheme = uiState.themeMode,
                     onThemeSelected = { viewModel.setThemeMode(it) }
                 )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = tokens.border.copy(alpha = 0.4f))
+                SettingsSwitchRow(
+                    title = "Outdoor High-Contrast Override",
+                    subtitle = "Deep contrast borders & surfaces for legibility under direct sunlight",
+                    checked = uiState.isHighContrastOutdoor,
+                    onCheckedChange = { viewModel.setHighContrastOutdoor(it) }
+                )
             }
 
             // 🔒 Privacy & Security Section
@@ -175,6 +185,20 @@ fun SettingsScreen(
                     checked = uiState.requireAuthForCvv,
                     onCheckedChange = { viewModel.toggleRequireAuthForCvv(it) }
                 )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = tokens.border.copy(alpha = 0.4f))
+                SettingsSwitchRow(
+                    title = "Per-Field Biometric Step-Up",
+                    subtitle = "Require fingerprint/biometric before copying card numbers or revealing PINs",
+                    checked = uiState.requireBiometricForSensitive,
+                    onCheckedChange = { viewModel.setRequireBiometricForSensitive(it) }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = tokens.border.copy(alpha = 0.4f))
+                SettingsClickableRow(
+                    title = "Duress / Decoy Vault Mode",
+                    subtitle = if (uiState.hasDecoyPin) "Secondary PIN active • Opens decoy profile under duress" else "Disabled • Configure a secondary PIN that opens an isolated decoy wallet",
+                    icon = Icons.Rounded.Shield,
+                    onClick = { showDecoyPinDialog = true }
+                )
             }
 
             // 💰 Balance & Expiry Rules
@@ -203,6 +227,16 @@ fun SettingsScreen(
                     title = "Offline Backup & Restore",
                     subtitle = "Export or import your encrypted vault data (.giftvault)",
                     icon = Icons.Rounded.FolderZip,
+                    onClick = onNavigateToBackup
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = tokens.border.copy(alpha = 0.4f))
+                SettingsClickableRow(
+                    title = "Backup Staleness Safeguard",
+                    subtitle = if (uiState.changesSinceLastBackup > 0)
+                        "${uiState.changesSinceLastBackup} unsaved changes since last export • Tap to export now"
+                    else
+                        "Encrypted backup is up to date • No unsaved changes",
+                    icon = if (uiState.changesSinceLastBackup > 0) Icons.Rounded.WarningAmber else Icons.Rounded.CheckCircle,
                     onClick = onNavigateToBackup
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = tokens.border.copy(alpha = 0.4f))
@@ -243,6 +277,16 @@ fun SettingsScreen(
                         onNavigateToReminders()
                     }
                 )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = tokens.border.copy(alpha = 0.4f))
+                SettingsClickableRow(
+                    title = "Notification Quiet Hours",
+                    subtitle = if (uiState.quietHoursEnabled)
+                        "Muting alerts between ${uiState.quietHoursStart}:00 and ${uiState.quietHoursEnd}:00"
+                    else
+                        "Disabled • Alerts delivered in real time",
+                    icon = Icons.Rounded.Bedtime,
+                    onClick = { showQuietHoursDialog = true }
+                )
             }
 
             // ℹ️ About Section
@@ -273,7 +317,7 @@ fun SettingsScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "GiftVault Pro V9.00.00",
+                        "GiftVault Pro V${uiState.appVersion}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Black
                     )
@@ -654,6 +698,126 @@ fun SettingsScreen(
             onDismissRequest = { showBalanceCheckDialog = false },
             tokens = tokens
         )
+    }
+
+    // ── Duress / Decoy PIN Dialog ──
+    if (showDecoyPinDialog) {
+        LiquidGlassDialog(
+            onDismissRequest = { showDecoyPinDialog = false },
+            title = "Decoy Vault Mode",
+            tokens = tokens,
+            confirmButton = {
+                LiquidGlassButton(
+                    onClick = {
+                        val pin = decoyPinInput.trim()
+                        if (pin.length >= 4) {
+                            viewModel.setDecoyPin(pin)
+                            showDecoyPinDialog = false
+                            Toast.makeText(context, "Decoy PIN saved", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "PIN must be at least 4 digits", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    text = "Save PIN",
+                    style = GlassButtonStyle.PRIMARY,
+                    tokens = tokens
+                )
+            },
+            dismissButton = {
+                if (uiState.hasDecoyPin) {
+                    LiquidGlassButton(
+                        onClick = {
+                            viewModel.setDecoyPin(null)
+                            showDecoyPinDialog = false
+                            Toast.makeText(context, "Decoy PIN disabled", Toast.LENGTH_SHORT).show()
+                        },
+                        text = "Disable Decoy",
+                        style = GlassButtonStyle.SECONDARY,
+                        tokens = tokens
+                    )
+                } else {
+                    LiquidGlassButton(
+                        onClick = { showDecoyPinDialog = false },
+                        text = "Cancel",
+                        style = GlassButtonStyle.SECONDARY,
+                        tokens = tokens
+                    )
+                }
+            }
+        ) {
+            Text(
+                "Entering this secondary PIN on the unlock screen opens a completely isolated decoy profile with zero access to your real gift cards or bank cards.",
+                style = MaterialTheme.typography.bodySmall,
+                color = tokens.textSecondary
+            )
+            Spacer(Modifier.height(14.dp))
+            OutlinedTextField(
+                value = decoyPinInput,
+                onValueChange = { decoyPinInput = it.filter { c -> c.isDigit() }.take(6) },
+                label = { Text("Secondary Decoy PIN (4-6 Digits)") },
+                placeholder = { Text("e.g. 9999", color = tokens.textTertiary) },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+
+    // ── Notification Quiet Hours Dialog ──
+    if (showQuietHoursDialog) {
+        var quietEnabled by remember { mutableStateOf(uiState.quietHoursEnabled) }
+        var startHour by remember { mutableStateOf(uiState.quietHoursStart) }
+        var endHour by remember { mutableStateOf(uiState.quietHoursEnd) }
+
+        LiquidGlassDialog(
+            onDismissRequest = { showQuietHoursDialog = false },
+            title = "Notification Quiet Hours",
+            tokens = tokens,
+            confirmButton = {
+                LiquidGlassButton(
+                    onClick = {
+                        viewModel.setQuietHours(quietEnabled, startHour, endHour)
+                        showQuietHoursDialog = false
+                        Toast.makeText(context, "Quiet hours updated", Toast.LENGTH_SHORT).show()
+                    },
+                    text = "Save",
+                    style = GlassButtonStyle.PRIMARY,
+                    tokens = tokens
+                )
+            },
+            dismissButton = {
+                LiquidGlassButton(
+                    onClick = { showQuietHoursDialog = false },
+                    text = "Cancel",
+                    style = GlassButtonStyle.SECONDARY,
+                    tokens = tokens
+                )
+            }
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SettingsSwitchRow(
+                    title = "Enable Quiet Hours",
+                    subtitle = "Mute non-urgent notifications during scheduled hours",
+                    checked = quietEnabled,
+                    onCheckedChange = { quietEnabled = it }
+                )
+                if (quietEnabled) {
+                    Text(
+                        "Silent Window: $startHour:00 to $endHour:00",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = tokens.primaryAccent
+                    )
+                    Text(
+                        "Expiry alerts scheduled during quiet hours will be suppressed until morning.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tokens.textSecondary
+                    )
+                }
+            }
+        }
     }
 }
 
